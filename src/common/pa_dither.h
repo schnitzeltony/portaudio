@@ -60,13 +60,8 @@ extern "C"
 /** @brief State needed to generate a dither signal */
 typedef struct PaUtilTriangularDitherGenerator{
     PaUint32 previous;
-#ifndef __ARM_NEON__
-    PaUint32 randSeed1[1];
-    PaUint32 randSeed2[1];
-#else
-    PaUint32 randSeed1[ARM_NEON_BEST_VECTOR_SIZE];
-    PaUint32 randSeed2[ARM_NEON_BEST_VECTOR_SIZE]
-#endif
+    PaUint32 randSeed1;
+    PaUint32 randSeed2;
 } PaUtilTriangularDitherGenerator;
 
 
@@ -126,77 +121,20 @@ static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTria
     for(int lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
     {
         /* Generate two random numbers. */
-        state->randSeed1[0] = (state->randSeed1[0] * 196314165) + 907633515;
-        state->randSeed2[0] = (state->randSeed2[0] * 196314165) + 907633515;
+        state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
+        state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
         /* Generate triangular distribution about 0.
          * Shift before adding to prevent overflow which would skew the distribution.
          * Also shift an extra bit for the high pass filter.
          */
-        current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
-                  (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
+        current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
+                  (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
 
         /* High pass filter to reduce audibility. */
         highPass[lane] = current - state->previous;
         state->previous = current;
     }
     return vmulq_n_f32(vcvtq_f32_s32(vld1q_s32(highPass)), const_float_dither_scale_);
-
-
-#if 0
-    uint32x4_t neonOffset = vdupq_n_u32(907633515);
-    uint32x4_t neonMult   = vdupq_n_u32(196314165);
-    uint32x4_t neonRandSeed;;
-    /* was
-    state->randSeed1 = (state->randSeed1[0] * 196314165) + 907633515;
-    state->randSeed2 = (state->randSeed2[0] * 196314165) + 907633515;
-     */
-    /* Seed1 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
-    neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed1), neonMult);
-    /* Generate triangular distribution about 0.
-     * Shift before adding to prevent overflow which would skew the distribution.
-     * Also shift an extra bit for the high pass filter.
-     */
-    /* was
-    current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
-              (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
-     */
-    /* cast to signed and shift */
-    int32x4_t neonRandSeedSigned1 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
-    /* each lane must have full set of calculations */
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    vst1q_u32(state->randSeed1, neonRandSeed);
-
-
-    /* Seed2 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
-    neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed2), neonMult);
-    /* cast to signed and shift */
-    int32x4_t neonRandSeedSigned2 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
-    /* each lane must have full run of calculations */
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
-    vst1q_u32(state->randSeed2, neonRandSeed);
-
-    /* calc shifted randSeed sum*/
-    int32x4_t neonCurrent = vaddq_s32(neonRandSeedSigned1, neonRandSeedSigned2);
-
-    /* High pass filter to reduce audibility. */
-    /*highPass = current - state->previous;
-    state->previous = current;
-    return highPass;*/
-    /* unrolling this is quite simple: move current one position right and fill topmost with
-     * previous. Substract this vector from current => highPass vector
-     */
-    int32x4_t neonPrev = vextq_s32(neonCurrent, neonCurrent, 3);
-    /* load old prev scalar into most left lane */
-    neonPrev = vld1q_lane_s32(&state->previous, neonPrev, 0);
-    /* store most right lane of current to state->previous */
-    vst1q_lane_u32(&state->previous, vreinterpretq_u32_s32(neonCurrent), ARM_NEON_BEST_VECTOR_SIZE-1);
-    /* sub curr - prev / convert to float / scale -> out */
-    return vmulq_n_f32(vcvtq_f32_s32(vqsubq_s32(neonCurrent, neonPrev)), const_float_dither_scale_);
-#endif
 }
 #endif
 

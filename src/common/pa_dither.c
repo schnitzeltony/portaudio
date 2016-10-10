@@ -50,24 +50,8 @@ extern volatile int withAcceleration;
 void PaUtil_InitializeTriangularDitherState( PaUtilTriangularDitherGenerator *state )
 {
     state->previous = 0;
-    state->randSeed1[0] = 22222;
-    state->randSeed2[0] = 5555555;
-#ifdef __ARM_NEON__
-    if(withAcceleration)
-    {
-        for(int lane=1; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
-        {
-            /* use our classic unaccelerated version to create additional vectors */
-            PaUtil_Generate16BitTriangularDither(state);
-            state->randSeed1[lane] = state->randSeed1[0];
-            state->randSeed2[lane] = state->randSeed2[0];
-        }
-        /* restore initial condition */
-        state->previous = 0;
-        state->randSeed1[0] = 22222;
-        state->randSeed2[0] = 5555555;
-    }
-#endif
+    state->randSeed1 = 22222;
+    state->randSeed2 = 5555555;
 }
 
 
@@ -76,15 +60,15 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *s
     PaInt32 current, highPass;
 
     /* Generate two random numbers. */
-    state->randSeed1[0] = (state->randSeed1[0] * 196314165) + 907633515;
-    state->randSeed2[0] = (state->randSeed2[0] * 196314165) + 907633515;
+    state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
+    state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
 
     /* Generate triangular distribution about 0.
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter. 
      */
-    current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
-              (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
+    current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
 
     /* High pass filter to reduce audibility. */
     highPass = current - state->previous;
@@ -99,14 +83,14 @@ float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *sta
     PaInt32 current, highPass;
 
     /* Generate two random numbers. */
-    state->randSeed1[0] = (state->randSeed1[0] * 196314165) + 907633515;
-    state->randSeed2[0] = (state->randSeed2[0] * 196314165) + 907633515;
+    state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
+    state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
     /* Generate triangular distribution about 0.
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter. 
      */
-    current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
-              (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
+    current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
 
     /* High pass filter to reduce audibility. */
     highPass = current - state->previous;
