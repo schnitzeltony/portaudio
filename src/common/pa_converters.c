@@ -431,13 +431,14 @@ static void Float32_To_Int32(
     {
         float32x4_t neonSourceVector, neonScaled;
         int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(0x7FFFFFFF);
         while(count >= ARM_NEON_BEST_VECTOR_SIZE)
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(src, sourceStride);
             src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
             /* scale vector */
-            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
+            neonScaled = vmulq_f32(neonSourceVector, neonMult);
             /* convert vector - not rounded */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
