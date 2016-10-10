@@ -62,7 +62,8 @@ void PaUtil_InitializeTriangularDitherState( PaUtilTriangularDitherGenerator *st
             state->randSeed1[lane] = state->randSeed1[0];
             state->randSeed2[lane] = state->randSeed2[0];
         }
-        /* restore initial condition for lane 0 */
+        /* restore initial condition */
+        state->previous = 0;
         state->randSeed1[0] = 22222;
         state->randSeed2[0] = 5555555;
     }

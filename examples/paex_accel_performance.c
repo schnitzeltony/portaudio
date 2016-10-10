@@ -112,6 +112,7 @@ int main(void)
         printf("%.5f ", dithersAccel[iDither]);
     printf("\n");
 #endif
+    printf("\n");
 
     /* test all converters for performance and correct data */
     int iCountConverters = 58;  /* set max entry+1 below */
