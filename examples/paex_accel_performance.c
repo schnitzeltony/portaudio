@@ -82,8 +82,39 @@ typedef struct {
 int main(void);
 int main(void)
 {
-    int iCountConverters = 58;  /* set max entry+1 below */
+    /* create dither instance */
+    PaUtilTriangularDitherGenerator dither;
+    #define DITHER_TEST_SIZE 8
 
+    /* test proper working float dither generator */
+    withAcceleration = 0;
+    PaUtil_InitializeTriangularDitherState(&dither);
+    float dithersOrig[DITHER_TEST_SIZE];
+    int iDither;
+    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+        dithersOrig[iDither] = PaUtil_GenerateFloatTriangularDither(&dither);
+    printf("Dither original: ");
+    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+        printf("%.5f ", dithersOrig[iDither]);
+    printf("\n");
+#ifdef __ARM_NEON__
+    withAcceleration = 1;
+    PaUtil_InitializeTriangularDitherState(&dither);
+    float dithersAccel[DITHER_TEST_SIZE];
+    float32x4_t neonDither;
+    for(iDither=0; iDither<DITHER_TEST_SIZE/ARM_NEON_BEST_VECTOR_SIZE; iDither++)
+    {
+        neonDither = PaUtil_GenerateFloatTriangularDitherVector(&dither);
+        vst1q_f32(dithersAccel+(iDither*ARM_NEON_BEST_VECTOR_SIZE), neonDither);
+    }
+    printf("Dither acceller: ");
+    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+        printf("%.5f ", dithersAccel[iDither]);
+    printf("\n");
+#endif
+
+    /* test all converters for performance and correct data */
+    int iCountConverters = 58;  /* set max entry+1 below */
     /* Create our converter table */
     PaUtilConverterTablePerf table[iCountConverters];
     ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
@@ -154,9 +185,6 @@ int main(void)
     ADD_TAB_ENTRY(55, Copy_16_To_16, int16, int16);
     ADD_TAB_ENTRY(56, Copy_24_To_24, int24, int24);
     ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32);
-
-    /* create dither instance */
-    PaUtilTriangularDitherGenerator dither;
 
     /* define test tupels */
     int buffer_sizes[] = {64, 256, 1024, MAX_BUFFLEN};
