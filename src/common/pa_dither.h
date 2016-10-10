@@ -60,7 +60,8 @@ extern "C"
 /** @brief State needed to generate a dither signal */
 typedef struct PaUtilTriangularDitherGenerator{
     PaUint32 previous;
-    PaUint32 randSeed[2];
+    PaUint32 randSeed1;
+    PaUint32 randSeed2;
 } PaUtilTriangularDitherGenerator;
 
 
@@ -117,22 +118,17 @@ static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
 static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
 {
     int32_t current, highPass[ARM_NEON_BEST_VECTOR_SIZE];
-    uint32x2_t neonOffset = vdup_n_u32(907633515);
-    uint32x2_t neonMult   = vdup_n_u32(196314165);
     for(int lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
     {
-        /* was
-        state->randSeed[0] = (state->randSeed[0][0] * 196314165) + 907633515;
-        state->randSeed[1] = (state->randSeed[1][0] * 196314165) + 907633515;
-         */
-        /* Generate two random numbers. vmla(a,b,c) <-> a+b*c */
-        vst1_u32(state->randSeed, vmla_u32(neonOffset, vld1_u32(state->randSeed), neonMult));
+        /* Generate two random numbers. */
+        state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
+        state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
         /* Generate triangular distribution about 0.
          * Shift before adding to prevent overflow which would skew the distribution.
          * Also shift an extra bit for the high pass filter.
          */
-        current = (((PaInt32)state->randSeed[0])>>DITHER_SHIFT_) +
-                  (((PaInt32)state->randSeed[1])>>DITHER_SHIFT_);
+        current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
+                  (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
 
         /* High pass filter to reduce audibility. */
         highPass[lane] = current - state->previous;
