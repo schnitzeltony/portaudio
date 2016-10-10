@@ -50,8 +50,8 @@ extern volatile int withAcceleration;
 void PaUtil_InitializeTriangularDitherState( PaUtilTriangularDitherGenerator *state )
 {
     state->previous = 0;
-    state->randSeed1 = 22222;
-    state->randSeed2 = 5555555;
+    state->randSeed[0] = 22222;
+    state->randSeed[1] = 5555555;
 }
 
 
@@ -60,15 +60,15 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *s
     PaInt32 current, highPass;
 
     /* Generate two random numbers. */
-    state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
-    state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
+    state->randSeed[0] = (state->randSeed[0] * 196314165) + 907633515;
+    state->randSeed[1] = (state->randSeed[1] * 196314165) + 907633515;
 
     /* Generate triangular distribution about 0.
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter. 
      */
-    current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
-              (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
+    current = (((PaInt32)state->randSeed[0])>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed[1])>>DITHER_SHIFT_);
 
     /* High pass filter to reduce audibility. */
     highPass = current - state->previous;
@@ -83,14 +83,14 @@ float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *sta
     PaInt32 current, highPass;
 
     /* Generate two random numbers. */
-    state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
-    state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
+    state->randSeed[0] = (state->randSeed[0] * 196314165) + 907633515;
+    state->randSeed[1] = (state->randSeed[1] * 196314165) + 907633515;
     /* Generate triangular distribution about 0.
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter. 
      */
-    current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
-              (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
+    current = (((PaInt32)state->randSeed[0])>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed[1])>>DITHER_SHIFT_);
 
     /* High pass filter to reduce audibility. */
     highPass = current - state->previous;
