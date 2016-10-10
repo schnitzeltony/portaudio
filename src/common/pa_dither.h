@@ -60,8 +60,13 @@ extern "C"
 /** @brief State needed to generate a dither signal */
 typedef struct PaUtilTriangularDitherGenerator{
     PaUint32 previous;
-    PaUint32 randSeed1;
-    PaUint32 randSeed2;
+#ifndef __ARM_NEON__
+    PaUint32 randSeed1[1];
+    PaUint32 randSeed2[1];
+#else
+    PaUint32 randSeed1[ARM_NEON_BEST_VECTOR_SIZE];
+    PaUint32 randSeed2[ARM_NEON_BEST_VECTOR_SIZE]
+#endif
 } PaUtilTriangularDitherGenerator;
 
 
@@ -98,6 +103,73 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *d
 */
 float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *ditherState );
 
+
+
+/* Note that the linear congruential algorithm requires 32 bit integers
+ * because it uses arithmetic overflow. So use PaUint32 instead of
+ * unsigned long so it will work on 64 bit systems.
+ */
+
+#define PA_DITHER_BITS_   (15)
+
+/* Multiply by PA_FLOAT_DITHER_SCALE_ to get a float between -2.0 and +1.99999 */
+#define PA_FLOAT_DITHER_SCALE_  (1.0f / ((1<<PA_DITHER_BITS_)-1))
+static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
+
+#define DITHER_SHIFT_  ((sizeof(PaInt32)*8 - PA_DITHER_BITS_) + 1)
+
+
+#ifdef __ARM_NEON__
+static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
+{
+    uint32x4_t neonOffset = vdupq_n_u32(907633515);
+    uint32x4_t neonMult   = vdupq_n_u32(196314165);
+    uint32x4_t neonRandSeed;;
+    /* was
+    state->randSeed1 = (state->randSeed1[0] * 196314165) + 907633515;
+    state->randSeed2 = (state->randSeed2[0] * 196314165) + 907633515;
+     */
+    /* Seed1 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
+    neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed1), neonMult);
+    vst1q_u32(state->randSeed1, neonRandSeed);
+
+    /* Generate triangular distribution about 0.
+     * Shift before adding to prevent overflow which would skew the distribution.
+     * Also shift an extra bit for the high pass filter.
+     */
+    /* was
+    current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
+     */
+    /* cast to signed and shift */
+    int32x4_t neonRandSeedSigned1 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
+
+    /* Seed2 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
+    neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed2), neonMult);
+    vst1q_u32(state->randSeed2, neonRandSeed);
+
+    /* cast to signed and shift */
+    int32x4_t neonRandSeedSigned2 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
+
+    /* calc shifted randSeed sum*/
+    int32x4_t neonCurrent = vaddq_s32(neonRandSeedSigned1, neonRandSeedSigned2);
+
+    /* High pass filter to reduce audibility. */
+    /*highPass = current - state->previous;
+    state->previous = current;
+    return highPass;*/
+    /* unrolling this is quite simple: move current one position right and fill topmost with
+     * previous. Substract this vector from current => highPass vector
+     */
+    int32x4_t neonPrev = vextq_s32(neonCurrent, neonCurrent, 3);
+    /* load old prev scalar into most left lane */
+    neonPrev = vld1q_lane_s32(&state->previous, neonPrev, 0);
+    /* store most right lane of currnet to state->previous */
+    vst1q_lane_u32(&state->previous, vreinterpretq_u32_s32(neonCurrent), ARM_NEON_BEST_VECTOR_SIZE-1);
+    /* sub curr - prev / convert to float / scale -> out */
+    return vmulq_n_f32(vcvtq_f32_s32(vqsubq_s32(neonCurrent, neonPrev)), const_float_dither_scale_);
+}
+#endif
 
 
 #ifdef __cplusplus
