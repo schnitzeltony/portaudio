@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "pa_converters.h"
 #include "pa_dither.h"
 #include "pa_endianness.h"
@@ -93,10 +94,6 @@ int main(void)
     int iDither;
     for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
         dithersOrig[iDither] = PaUtil_GenerateFloatTriangularDither(&dither);
-    printf("Dither original: ");
-    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
-        printf("%.5f ", dithersOrig[iDither]);
-    printf("\n");
 
 #ifdef __ARM_NEON__
     withAcceleration = 1;
@@ -108,12 +105,27 @@ int main(void)
         neonDither = PaUtil_GenerateFloatTriangularDitherVector(&dither);
         vst1q_f32(dithersAccel+(iDither*ARM_NEON_BEST_VECTOR_SIZE), neonDither);
     }
-    printf("Dither acceller: ");
+    /* check dither for equality */
+    int errorsdetected = 0;
     for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
-        printf("%.5f ", dithersAccel[iDither]);
-    printf("\n");
+    {
+        if(fabs(dithersOrig[iDither] - dithersAccel[iDither]) > 1e-5)
+            errorsdetected++;
+    }
+    if(errorsdetected)
+    {
+        printf("Error acellerated dither is invalid!");
+        printf("Dither original: ");
+        for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+            printf("%.3f ", dithersOrig[iDither]);
+        printf("\n");
+        printf("Dither acceller: ");
+        for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+            printf("%.3f ", dithersAccel[iDither]);
+        printf("\n\n");
+    }
+
 #endif
-    printf("\n");
 
     /* test all converters for performance and correct data */
     int iCountConverters = 58;  /* set max entry+1 below */
