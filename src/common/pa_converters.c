@@ -26,13 +26,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -65,6 +65,92 @@
 #include "pa_dither.h"
 #include "pa_endianness.h"
 #include "pa_types.h"
+
+/* allow to switch acceleration on/off */
+volatile int withAcceleration = 1;
+
+#ifdef __ARM_NEON__
+
+static inline float32x4_t NeonGetSourceVector(
+    float *src, signed int sourceStride)
+{
+    int lane;
+    float32x4_t neonSourceVector;
+    switch(sourceStride)
+    {
+        case 1:
+            neonSourceVector = vld1q_f32(src);
+            break;
+        case 2:
+        {
+            float32x4x2_t neonTmp = vld2q_f32(src);
+            neonSourceVector = neonTmp.val[0];
+            break;
+        }
+        /* VLDN N>2 decrease performance */
+        default:
+            for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+            {
+                neonSourceVector = vld1q_lane_f32(src, neonSourceVector, lane);
+                src += sourceStride;
+            }
+            break;
+    }
+    return neonSourceVector;
+}
+
+static inline float32x4_t NeonClipVector(
+    float32x4_t neonVector)
+{
+    float32x4_t neonClipMax = vdupq_n_f32(2147483647.f);
+    neonVector = vmaxq_f32(neonVector, neonClipMax);
+    float32x4_t neonClipMin = vdupq_n_f32(-2147483648.f);
+    neonVector = vminq_f32(neonVector, neonClipMin);
+    return neonVector;
+}
+
+static inline void NeonWriteDestVectorInt32(
+    int32x4_t neonResultVector, PaInt32 *dest, signed int destinationStride)
+{
+    int lane;
+    switch(destinationStride)
+    {
+        case 1:
+            vst1q_s32(dest, neonResultVector);
+            break;
+        default:
+            for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+            {
+                vst1q_lane_s32(dest, neonResultVector, lane);
+                dest += destinationStride;
+            }
+            break;
+    }
+}
+
+static inline void NeonWriteDestVectorInt24(
+    int32x4_t neonResultVector, unsigned char *dest, signed int destinationStride)
+{
+    int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+    int lane;
+    PaInt32 temp;
+    vst1q_s32(resultVector32, neonResultVector);
+    for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+    {
+        temp = resultVector32[lane];
+#if defined(PA_LITTLE_ENDIAN)
+        dest[0] = (unsigned char)(temp >> 8);
+        dest[1] = (unsigned char)(temp >> 16);
+        dest[2] = (unsigned char)(temp >> 24);
+#elif defined(PA_BIG_ENDIAN)
+        dest[0] = (unsigned char)(temp >> 24);
+        dest[1] = (unsigned char)(temp >> 16);
+        dest[2] = (unsigned char)(temp >> 8);
+#endif
+    }
+}
+
+#endif /* __ARM_NEON__ */
 
 
 PaSampleFormat PaUtil_SelectClosestAvailableFormat(
@@ -340,10 +426,32 @@ static void Float32_To_Int32(
     PaInt32 *dest =  (PaInt32*)destinationBuffer;
     (void)ditherGenerator; /* unused parameter */
 
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector */
+            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
+            dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
+            count -= ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* REVIEW */
-#ifdef PA_USE_C99_LRINTF
+#if defined (PA_USE_C99_LRINTF) && !defined (__ARM_NEON__)
         float scaled = *src * 0x7FFFFFFF;
         *dest = lrintf(scaled-0.5f);
 #else
@@ -366,10 +474,36 @@ static void Float32_To_Int32_Dither(
     float *src = (float*)sourceBuffer;
     PaInt32 *dest =  (PaInt32*)destinationBuffer;
 
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
+        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(
+                PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
+                neonSourceVector,
+                neonMult);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
+            dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* REVIEW */
-#ifdef PA_USE_C99_LRINTF
+#if defined (PA_USE_C99_LRINTF) && !defined (__ARM_NEON__)
         float dither  = PaUtil_GenerateFloatTriangularDither( ditherGenerator );
         /* use smaller scaler to prevent overflow when we add the dither */
         float dithered = ((float)*src * (2147483646.0f)) + dither;
@@ -396,10 +530,34 @@ static void Float32_To_Int32_Clip(
     PaInt32 *dest =  (PaInt32*)destinationBuffer;
     (void) ditherGenerator; /* unused parameter */
     
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector */
+            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
+            /* clip vector */
+            neonScaled = NeonClipVector(neonScaled);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
+            dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* REVIEW */
-#ifdef PA_USE_C99_LRINTF
+#if defined (PA_USE_C99_LRINTF) && !defined (__ARM_NEON__)
         float scaled = *src * 0x7FFFFFFF;
         PA_CLIP_( scaled, -2147483648.f, 2147483647.f  );
         *dest = lrintf(scaled-0.5f);
@@ -424,10 +582,38 @@ static void Float32_To_Int32_DitherClip(
     float *src = (float*)sourceBuffer;
     PaInt32 *dest =  (PaInt32*)destinationBuffer;
 
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
+        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(
+                PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
+                neonSourceVector,
+                neonMult);
+            /* clip vector */
+            neonScaled = NeonClipVector(neonScaled);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
+            dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* REVIEW */
-#ifdef PA_USE_C99_LRINTF
+#if defined (PA_USE_C99_LRINTF) && !defined (__ARM_NEON__)
         float dither  = PaUtil_GenerateFloatTriangularDither( ditherGenerator );
         /* use smaller scaler to prevent overflow when we add the dither */
         float dithered = ((float)*src * (2147483646.0f)) + dither;
@@ -459,6 +645,28 @@ static void Float32_To_Int24(
 
     (void) ditherGenerator; /* unused parameter */
     
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector */
+            neonScaled = vmulq_n_f32(neonSourceVector, 2147483647.0);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
+            dest += destinationStride * 3;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* convert to 32 bit and drop the low 8 bits */
@@ -490,6 +698,33 @@ static void Float32_To_Int24_Dither(
     float *src = (float*)sourceBuffer;
     unsigned char *dest = (unsigned char*)destinationBuffer;
     PaInt32 temp;
+
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
+        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(
+                PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
+                neonSourceVector,
+                neonMult);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
+            dest += destinationStride * 3;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
 
     while( count-- )
     {
@@ -529,6 +764,31 @@ static void Float32_To_Int24_Clip(
 
     (void) ditherGenerator; /* unused parameter */
     
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector */
+            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
+            /* clip vector */
+            neonScaled = NeonClipVector(neonScaled);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
+            dest += destinationStride * 3;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* convert to 32 bit and drop the low 8 bits */
@@ -561,7 +821,36 @@ static void Float32_To_Int24_DitherClip(
     float *src = (float*)sourceBuffer;
     unsigned char *dest = (unsigned char*)destinationBuffer;
     PaInt32 temp;
-    
+
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled;
+        int32x4_t neonResultVector;
+        int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
+        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(src, sourceStride);
+            src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(
+                PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
+                neonSourceVector,
+                neonMult);
+            /* clip vector */
+            neonScaled = NeonClipVector(neonScaled);
+            /* convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
+            dest += destinationStride * 3;
+            count-=ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
         /* convert to 32 bit and drop the low 8 bits */

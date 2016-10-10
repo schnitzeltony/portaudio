@@ -360,8 +360,8 @@ static void Float32_To_Int32_DitherClip(
 
     // dither state:
     unsigned long ditherPrevious = ditherGenerator->previous;
-    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1;
-    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2;
+    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1[0];
+    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2[0];
                     
     __asm{
         // esi -> source ptr
@@ -476,8 +476,8 @@ static void Float32_To_Int32_DitherClip(
     }
 
     ditherGenerator->previous = ditherPrevious;
-    ditherGenerator->randSeed1 = ditherRandSeed1;
-    ditherGenerator->randSeed2 = ditherRandSeed2;
+    ditherGenerator->randSeed1[0] = ditherRandSeed1;
+    ditherGenerator->randSeed2[0] = ditherRandSeed2;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -731,8 +731,8 @@ static void Float32_To_Int24_DitherClip(
 
     // dither state:
     unsigned long ditherPrevious = ditherGenerator->previous;
-    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1;
-    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2;
+    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1[0];
+    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2[0];
     
     signed long tempInt32;
                  
@@ -856,8 +856,8 @@ static void Float32_To_Int24_DitherClip(
     }
 
     ditherGenerator->previous = ditherPrevious;
-    ditherGenerator->randSeed1 = ditherRandSeed1;
-    ditherGenerator->randSeed2 = ditherRandSeed2;
+    ditherGenerator->randSeed1[0] = ditherRandSeed1;
+    ditherGenerator->randSeed2[0] = ditherRandSeed2;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1075,8 +1075,8 @@ static void Float32_To_Int16_DitherClip(
 
     // dither state:
     unsigned long ditherPrevious = ditherGenerator->previous;
-    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1;
-    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2;
+    unsigned long ditherRandSeed1 = ditherGenerator->randSeed1[0];
+    unsigned long ditherRandSeed2 = ditherGenerator->randSeed2[0];
 
     __asm{
         // esi -> source ptr
@@ -1192,8 +1192,8 @@ static void Float32_To_Int16_DitherClip(
     }
 
     ditherGenerator->previous = ditherPrevious;
-    ditherGenerator->randSeed1 = ditherRandSeed1;
-    ditherGenerator->randSeed2 = ditherRandSeed2;
+    ditherGenerator->randSeed1[0] = ditherRandSeed1;
+    ditherGenerator->randSeed2[0] = ditherRandSeed2;
 }
 
 /* -------------------------------------------------------------------------- */

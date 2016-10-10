@@ -90,6 +90,11 @@ typedef unsigned long PaUint32;
 #endif
 
 
+#ifdef __ARM_NEON__
+#define ARM_NEON_BEST_VECTOR_SIZE 4
+#include <arm_neon.h>
+#endif
+
 /* PA_VALIDATE_TYPE_SIZES compares the size of the integer types at runtime to
  ensure that PortAudio was configured correctly, and raises an assertion if
  they don't match the expected values. <assert.h> must be included in the
