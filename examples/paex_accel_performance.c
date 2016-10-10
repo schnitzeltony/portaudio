@@ -96,10 +96,6 @@ int main(void)
     printf("Dither original: ");
     for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
         printf("%.5f ", dithersOrig[iDither]);
-    /*printf("Status: seed1: %u seed2: %u previous: %u",
-        dither.randSeed1[0],
-        dither.randSeed2[0],
-        dither.previous);*/
     printf("\n");
 
 #ifdef __ARM_NEON__
@@ -115,10 +111,6 @@ int main(void)
     printf("Dither acceller: ");
     for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
         printf("%.5f ", dithersAccel[iDither]);
-    /*printf("Status: seed1: %u seed2: %u previous: %u",
-        dither.randSeed1[0],
-        dither.randSeed2[0],
-        dither.previous);*/
     printf("\n");
 #endif
     printf("\n");
