@@ -122,6 +122,27 @@ static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
 #ifdef __ARM_NEON__
 static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
 {
+    int32_t current, highPass[ARM_NEON_BEST_VECTOR_SIZE];
+    for(int lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+    {
+        /* Generate two random numbers. */
+        state->randSeed1[0] = (state->randSeed1[0] * 196314165) + 907633515;
+        state->randSeed2[0] = (state->randSeed2[0] * 196314165) + 907633515;
+        /* Generate triangular distribution about 0.
+         * Shift before adding to prevent overflow which would skew the distribution.
+         * Also shift an extra bit for the high pass filter.
+         */
+        current = (((PaInt32)state->randSeed1[0])>>DITHER_SHIFT_) +
+                  (((PaInt32)state->randSeed2[0])>>DITHER_SHIFT_);
+
+        /* High pass filter to reduce audibility. */
+        highPass[lane] = current - state->previous;
+        state->previous = current;
+    }
+    return vmulq_n_f32(vcvtq_f32_s32(vld1q_s32(highPass)), const_float_dither_scale_);
+
+
+#if 0
     uint32x4_t neonOffset = vdupq_n_u32(907633515);
     uint32x4_t neonMult   = vdupq_n_u32(196314165);
     uint32x4_t neonRandSeed;;
@@ -175,6 +196,7 @@ static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTria
     vst1q_lane_u32(&state->previous, vreinterpretq_u32_s32(neonCurrent), ARM_NEON_BEST_VECTOR_SIZE-1);
     /* sub curr - prev / convert to float / scale -> out */
     return vmulq_n_f32(vcvtq_f32_s32(vqsubq_s32(neonCurrent, neonPrev)), const_float_dither_scale_);
+#endif
 }
 #endif
 
