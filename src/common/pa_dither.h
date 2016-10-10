@@ -131,8 +131,6 @@ static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTria
      */
     /* Seed1 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
     neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed1), neonMult);
-    vst1q_u32(state->randSeed1, neonRandSeed);
-
     /* Generate triangular distribution about 0.
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter.
@@ -143,13 +141,22 @@ static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTria
      */
     /* cast to signed and shift */
     int32x4_t neonRandSeedSigned1 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
+    /* each lane must have full set of calculations */
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    vst1q_u32(state->randSeed1, neonRandSeed);
+
 
     /* Seed2 Generate two random numbers. vmla(a,b,c) <-> a+b*c */
     neonRandSeed = vmlaq_u32(neonOffset, vld1q_u32(state->randSeed2), neonMult);
-    vst1q_u32(state->randSeed2, neonRandSeed);
-
     /* cast to signed and shift */
     int32x4_t neonRandSeedSigned2 = vshrq_n_s32(vreinterpretq_s32_u32(neonRandSeed), DITHER_SHIFT_);
+    /* each lane must have full run of calculations */
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    neonRandSeed = vmlaq_u32(neonOffset, neonRandSeed, neonMult);
+    vst1q_u32(state->randSeed2, neonRandSeed);
 
     /* calc shifted randSeed sum*/
     int32x4_t neonCurrent = vaddq_s32(neonRandSeedSigned1, neonRandSeedSigned2);
