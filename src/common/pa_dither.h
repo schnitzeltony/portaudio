@@ -164,7 +164,7 @@ static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTria
     int32x4_t neonPrev = vextq_s32(neonCurrent, neonCurrent, 3);
     /* load old prev scalar into most left lane */
     neonPrev = vld1q_lane_s32(&state->previous, neonPrev, 0);
-    /* store most right lane of currnet to state->previous */
+    /* store most right lane of current to state->previous */
     vst1q_lane_u32(&state->previous, vreinterpretq_u32_s32(neonCurrent), ARM_NEON_BEST_VECTOR_SIZE-1);
     /* sub curr - prev / convert to float / scale -> out */
     return vmulq_n_f32(vcvtq_f32_s32(vqsubq_s32(neonCurrent, neonPrev)), const_float_dither_scale_);
