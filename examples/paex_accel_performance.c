@@ -72,11 +72,59 @@ typedef struct {
     char name[256];
 } PaUtilConverterTablePerf;
 
+/*******************************************************************/
+/* some helpers */
 #define ADD_TAB_ENTRY(_num, _name, _inDataType, _outDataType) \
     table[_num].pConverter = paConverters._name; \
     table[_num].inDataType = _inDataType; \
     table[_num].outDataType = _outDataType; \
     strcpy(table[_num].name, #_name);
+
+
+static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
+{
+    PaInt32 iVal24;
+    #if defined(PA_LITTLE_ENDIAN)
+    iVal24 =
+        ((PaInt32)pBuf[0] << 8) |
+        ((PaInt32)pBuf[1] << 16) |
+        ((PaInt32)pBuf[2] << 24);
+    #elif defined(PA_BIG_ENDIAN)
+    iVal24 =
+        ((PaInt32)pBuf[0] << 24) |
+        ((PaInt32)pBuf[1] << 16) |
+        ((PaInt32)pBuf[2] << 8);
+    #endif
+    return iVal24;
+}
+
+#define CHECK_BUFFER_ACCEL(_DATATYPE, _FORMAT) \
+    _DATATYPE *pBuffNoAccelNoStride   = (_DATATYPE *)destBuffer; \
+    _DATATYPE *pBuffNoAccelStride = (_DATATYPE *)destBufferStride; \
+    _DATATYPE *pBuffAccelNoStride = (_DATATYPE *)destBufferAccel; \
+    _DATATYPE *pBuffAccelStride = (_DATATYPE *)destBufferAccelStride; \
+    for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++) \
+    { \
+        if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem]) \
+        { \
+            if(errorNoStride < MaxValueErrorMsg) \
+                printf ("AccelError at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                    iDestElem, \
+                    pBuffAccelNoStride[iDestElem], \
+                    pBuffNoAccelNoStride[iDestElem]); \
+            errorNoStride++; \
+        } \
+        if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride]) \
+        { \
+            if(errorStride < MaxValueErrorMsg) \
+                printf ("AccelError stride %i at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                    iStride, \
+                    iDestElem, \
+                    pBuffAccelStride[iDestElem*iStride], \
+                    pBuffNoAccelStride[iDestElem*iStride]); \
+            errorStride++; \
+        } \
+    }
 
 
 /*******************************************************************/
@@ -207,8 +255,12 @@ int main(void)
     int countStrides = sizeof(strides)/sizeof(int);
 
     /* create our buffers */
-    float sourceBuffer[MAX_BUFFLEN * MAX_STRIDE];
-    float destBuffer[MAX_BUFFLEN * MAX_STRIDE];
+    float sourceBuffer[MAX_BUFFLEN];
+    float sourceBufferStride[MAX_BUFFLEN * MAX_STRIDE];
+    float destBuffer[MAX_BUFFLEN];
+    float destBufferStride[MAX_BUFFLEN * MAX_STRIDE];
+    float destBufferAccel[MAX_BUFFLEN];
+    float destBufferAccelStride[MAX_BUFFLEN * MAX_STRIDE];
 
     float timeNoAccelStrideSource[countStrides];
     float timeAccelStrideSource[countStrides];
@@ -225,34 +277,69 @@ int main(void)
             for(int iStrideNum=0; iStrideNum<countStrides; iStrideNum++)
             {
                 int iStride = strides[iStrideNum];
-                /* prepare interesting input test data depending on input data type */
+                /* prepare input test data depending on input data type */
                 int iEntry;
                 switch(table[iConverter].inDataType)
                 {
                     case int8:
                     {
+                        /* no stride */
+                        unsigned char i8Value = (iEntry % 256) - 128;
                         signed char *pBuff = (signed char *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                            pBuff[iEntry*iStride] = (iEntry % 256) - 128;
+                            pBuff[iEntry] = i8Value;
+                        /* stride */
+                        pBuff = (signed char *)sourceBufferStride;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            pBuff[iEntry*iStride] = i8Value;
                         break;
                     }
                     case uint8:
                     {
+                        /* no stride */
+                        unsigned char ui8Value = (iEntry % 256);
                         unsigned char *pBuff = (unsigned char *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                            pBuff[iEntry*iStride] = (iEntry % 256);
+                            pBuff[iEntry] = ui8Value;
+                        /* stride */
+                        pBuff = (unsigned char *)sourceBufferStride;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            pBuff[iEntry*iStride] = ui8Value;
                         break;
                     }
                     case int16:
                     {
+                        /* no stride */
+                        PaInt16 i16Value = ((iEntry % 256) - 128) * 256;
                         PaInt16 *pBuff = (PaInt16 *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                            pBuff[iEntry*iStride] = ((iEntry % 256) - 128) * 256;
+                            pBuff[iEntry] = i16Value;
+                        /* stride */
+                        pBuff = (PaInt16 *)sourceBufferStride;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            pBuff[iEntry*iStride] = i16Value;
                         break;
                     }
                     case int24:
                     {
-                        unsigned char *pBuff = (unsigned char*) sourceBuffer;
+                        unsigned char *pBuff = (unsigned char*)sourceBuffer;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            /* no stride */
+                            PaInt32 value = ((iEntry % 256) - 128) * 256 * 256;
+                            #if defined(PA_LITTLE_ENDIAN)
+                                    pBuff[0] = (unsigned char)(value >> 0);
+                                    pBuff[1] = (unsigned char)(value >> 8);
+                                    pBuff[2] = (unsigned char)(value >> 16);
+                            #elif defined(PA_BIG_ENDIAN)
+                                    pBuff[0] = (unsigned char)(value >> 16);
+                                    pBuff[1] = (unsigned char)(value >> 8);
+                                    pBuff[2] = (unsigned char)(value >> 0);
+                            #endif
+                            pBuff += 3;
+                        }
+                        /* stride */
+                        pBuff = (unsigned char*)sourceBufferStride;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                         {
                             PaInt32 value = ((iEntry % 256) - 128) * 256 * 256;
@@ -271,105 +358,210 @@ int main(void)
                     }
                     case int32:
                     {
+                        /* no stride */
+                        PaInt32 i32Value = ((iEntry % 256) - 128) * 256 * 256 * 256;
                         PaInt32 *pBuff = (PaInt32 *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                            pBuff[iEntry*iStride] = ((iEntry % 256) - 128) * 256 * 256 * 256;
+                            pBuff[iEntry] = i32Value;
+                        /* stride */
+                        pBuff = (PaInt32 *)sourceBufferStride;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            pBuff[iEntry*iStride] = i32Value;
                         break;
                     }
                     case float32:
                     {
+                        /* no stride */
+                        float fValue = ((float)((iEntry % 256) - 128)) / 128.0;;
                         float *pBuff = (float *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                            pBuff[iEntry*iStride] = ((float)((iEntry % 256) - 128)) / 128.0;
+                            pBuff[iEntry] = fValue;
+                        /* stride */
+                        pBuff = (float *)sourceBufferStride;
+                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            pBuff[iEntry*iStride] = fValue;
                         break;
                     }
                 }
 
-                /* Run without acceleration stride source */
+                /* Run without acceleration / stride for source buffer */
                 withAcceleration = 0;
                 PaUtil_InitializeTriangularDitherState(&dither);
                 clock_t tNoAccelSource = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)destBuffer,
-                        1,
-                        (void *)sourceBuffer,
-                        iStride,
-                        iBufferSize,
-                        &dither );
+                        /* dest */
+                        (void *)destBuffer, 1,
+                        /* source */
+                        (void *)sourceBufferStride, iStride,
+                        /* other */
+                        iBufferSize, &dither );
                 }
                 timeNoAccelStrideSource[iStrideNum] = ((float)(clock() - tNoAccelSource)) / CLOCKS_PER_SEC;
 
-                /* Run without acceleration stride dest */
+                /* Run without acceleration / stride for destination buffer */
                 withAcceleration = 0;
                 PaUtil_InitializeTriangularDitherState(&dither);
                 clock_t tNoAccelDest = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)destBuffer,
-                        iStride,
-                        (void *)sourceBuffer,
-                        1,
-                        iBufferSize,
-                        &dither );
+                        /* dest */
+                        (void *)destBufferStride, iStride,
+                        /* source */
+                        (void *)sourceBuffer, 1,
+                        /* other */
+                        iBufferSize, &dither );
                 }
                 timeNoAccelStrideDest[iStrideNum] = ((float)(clock() - tNoAccelDest)) / CLOCKS_PER_SEC;
 
-                /* Run with acceleration  stride source */
+                /* Run with acceleration / stride for source buffer */
                 withAcceleration = 1;
                 PaUtil_InitializeTriangularDitherState(&dither);
                 clock_t tAccelSource = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)destBuffer,
-                        1,
-                        (void *)sourceBuffer,
-                        iStride,
-                        iBufferSize,
-                        &dither );
+                        /* dest */
+                        (void *)destBufferAccel, 1,
+                        /* source */
+                        (void *)sourceBufferStride, iStride,
+                        /* other */
+                        iBufferSize, &dither );
                 }
                 timeAccelStrideSource[iStrideNum] = ((float)(clock() - tAccelSource)) / CLOCKS_PER_SEC;
 
-                /* Run with acceleration  stride dest */
+                /* Run with acceleration / stride for destination buffer */
                 withAcceleration = 1;
                 PaUtil_InitializeTriangularDitherState(&dither);
                 clock_t tAccelDest = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)destBuffer,
-                        iStride,
-                        (void *)sourceBuffer,
-                        1,
-                        iBufferSize,
-                        &dither );
+                        /* dest */
+                        (void *)destBufferAccelStride, iStride,
+                        /* source */
+                        (void *)sourceBuffer, 1,
+                        /* other */
+                        iBufferSize, &dither );
                 }
                 timeAccelStrideDest[iStrideNum] = ((float)(clock() - tAccelDest)) / CLOCKS_PER_SEC;
 
-                printf ("%s Accel=0 / size %i / stride(S%i,D1) %.6f sec stride(S1,D%i) %.6f sec\n",
+                printf ("%s Accel=0 / size %i / stride(S%i,D1) %8.6f sec stride(S1,D%i) %8.6f sec\n",
                     table[iConverter].name,
                     iBufferSize,
                     iStride,
                     timeNoAccelStrideSource[iStrideNum],
                     iStride,
                     timeNoAccelStrideDest[iStrideNum]);
-                printf ("%s Accel=1 / size %i / stride(S%i,D1) %.6f sec stride(S1,D%i) %.6f sec\n",
+                printf ("%s Accel=1 / size %i / stride(S%i,D1) %8.6f sec stride(S1,D%i) %8.6f sec\n",
                     table[iConverter].name,
                     iBufferSize,
                     iStride,
                     timeAccelStrideSource[iStrideNum],
                     iStride,
                     timeAccelStrideDest[iStrideNum]);
-                printf ("%s size %i / stride(S%i,D1) %.2f %% stride(S1,D%i) %.2f %%\n",
+                printf ("%s Eval    / size %i / stride(S%i,D1) %8.2f %%   stride(S1,D%i) %8.2f %%\n",
                     table[iConverter].name,
                     iBufferSize,
                     iStride,
                     ((timeNoAccelStrideSource[iStrideNum] / timeAccelStrideSource[iStrideNum]) - 1.0) * 100.0,
                     iStride,
                     ((timeNoAccelStrideDest[iStrideNum] / timeAccelStrideDest[iStrideNum]) - 1.0) * 100.0);
+
+                /* Check for valid contents in destination buffers */
+                int errorNoStride = 0;
+                int errorStride = 0;
+                const int MaxValueErrorMsg = 8;
+                /* contents depend on destination data type */
+                switch(table[iConverter].inDataType)
+                {
+                    case int8:
+                    {
+                        CHECK_BUFFER_ACCEL(signed char, %u)
+                        break;
+                    }
+                    case uint8:
+                    {
+                        CHECK_BUFFER_ACCEL(unsigned char, %u)
+                        break;
+                    }
+                    case int16:
+                    {
+                        CHECK_BUFFER_ACCEL(PaInt16, %i)
+                        break;
+                    }
+                    case int24:
+                    {
+                        unsigned char *pBuffNoAccelNoStride = (unsigned char *)destBuffer;
+                        unsigned char *pBuffNoAccelStride   = (unsigned char *)destBufferStride;
+                        unsigned char *pBuffAccelNoStride   = (unsigned char *)destBufferAccel;
+                        unsigned char *pBuffAccelStride     = (unsigned char *)destBufferAccelStride;
+                        for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
+                        {
+                            if( pBuffNoAccelNoStride[iDestElem*3 + 0] != pBuffAccelNoStride[iDestElem*3 + 0] ||
+                                pBuffNoAccelNoStride[iDestElem*3 + 1] != pBuffAccelNoStride[iDestElem*3 + 1] ||
+                                pBuffNoAccelNoStride[iDestElem*3 + 2] != pBuffAccelNoStride[iDestElem*3 + 2])
+                            {
+                                if(errorNoStride < MaxValueErrorMsg)
+                                    printf ("AccelError no stride at element %i: %i expected %i\n",
+                                        iDestElem,
+                                        _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
+                                        _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3));
+                                errorNoStride++;
+                            }
+                            if( pBuffNoAccelStride[iDestElem*iStride*3 + 0] != pBuffAccelStride[iDestElem*iStride*3 + 0] ||
+                                pBuffNoAccelStride[iDestElem*iStride*3 + 1] != pBuffAccelStride[iDestElem*iStride*3 + 1] ||
+                                pBuffNoAccelStride[iDestElem*iStride*3 + 2] != pBuffAccelStride[iDestElem*iStride*3 + 2])
+                            {
+                                if(errorStride < MaxValueErrorMsg)
+                                    printf ("AccelError stride %i at element %i: %i expected %i\n",
+                                        iStride,
+                                        iDestElem,
+                                        _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
+                                        _Int24_ToIn32(pBuffNoAccelStride + iDestElem*iStride*3));
+                                errorStride++;
+                            }
+                        }
+                        break;
+                    }
+                    case int32:
+                    {
+                        CHECK_BUFFER_ACCEL(PaInt32, %i)
+                        break;
+                    }
+                    case float32:
+                    {
+                        float *pBuffNoAccelNoStride = (float *)destBuffer;
+                        float *pBuffNoAccelStride = (float *)destBufferStride;
+                        float *pBuffAccelNoStride = (float *)destBufferAccel;
+                        float *pBuffAccelStride = (float *)destBufferAccelStride;
+                        for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
+                        {
+                            if(fabs(pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem]) > 1.0 / 2147483648.0)
+                            {
+                                if(errorNoStride < MaxValueErrorMsg)
+                                    printf ("AccelError no stride at element %i: %.12f expected %.12f\n",
+                                        iDestElem,
+                                        pBuffAccelNoStride[iDestElem],
+                                        pBuffNoAccelNoStride[iDestElem]);
+                                errorNoStride++;
+                            }
+                            if(fabs(pBuffNoAccelStride[iDestElem*iStride]-pBuffAccelStride[iDestElem*iStride]) > 1.0 / 2147483648.0)
+                            {
+                                if(errorStride < MaxValueErrorMsg)
+                                    printf ("AccelError stride %i at element %i: %.12f expected %.12f\n",
+                                        iStride,
+                                        iDestElem,
+                                        pBuffAccelStride[iDestElem*iStride],
+                                        pBuffNoAccelStride[iDestElem*iStride]);
+                                errorStride++;
+                            }
+                        }
+                        break;
+                    }
+                }
                 printf ("\n");
             }
         }
