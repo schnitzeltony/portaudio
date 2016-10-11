@@ -441,7 +441,7 @@ static void Float32_To_Int32(
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
-            /* scale & convert vector - not rounded */
+            /* scale & convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(vmulq_f32(neonSourceVector, neonMult));
             /* write result */
             dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
@@ -491,7 +491,7 @@ static void Float32_To_Int32_Dither(
                 PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
                 neonSourceVector,
                 neonMult);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
@@ -539,7 +539,7 @@ static void Float32_To_Int32_Clip(
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
-            /* scale & clip & convert vector - not rounded */
+            /* scale & clip & convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(NeonClipVector(vmulq_n_f32(neonSourceVector, 0x7FFFFFFF)));
             /* write result */
             dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
@@ -593,7 +593,7 @@ static void Float32_To_Int32_DitherClip(
                 neonMult);
             /* clip vector */
             neonScaled = NeonClipVector(neonScaled);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
@@ -648,7 +648,7 @@ static void Float32_To_Int24(
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
             /* scale vector */
             neonScaled = vmulq_n_f32(neonSourceVector, 2147483647.0);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
@@ -706,7 +706,7 @@ static void Float32_To_Int24_Dither(
                 PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator),
                 neonSourceVector,
                 neonMult);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
@@ -768,7 +768,7 @@ static void Float32_To_Int24_Clip(
             neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
             /* clip vector */
             neonScaled = NeonClipVector(neonScaled);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
@@ -829,7 +829,7 @@ static void Float32_To_Int24_DitherClip(
                 neonMult);
             /* clip vector */
             neonScaled = NeonClipVector(neonScaled);
-            /* convert vector - not rounded */
+            /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
