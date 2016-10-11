@@ -204,10 +204,16 @@ int main(void)
     int buffer_sizes[] = {64, 256, 1024, MAX_BUFFLEN};
     #define MAX_STRIDE 4
     int strides[] = {1, 2, MAX_STRIDE};
+    int countStrides = sizeof(strides)/sizeof(int);
 
     /* create our buffers */
-    float outputBuffer[MAX_BUFFLEN * MAX_STRIDE];
-    float inputBuffer[MAX_BUFFLEN * MAX_STRIDE];
+    float sourceBuffer[MAX_BUFFLEN * MAX_STRIDE];
+    float destBuffer[MAX_BUFFLEN * MAX_STRIDE];
+
+    float timeNoAccelStrideSource[countStrides];
+    float timeAccelStrideSource[countStrides];
+    float timeNoAccelStrideDest[countStrides];
+    float timeAccelStrideDest[countStrides];
 
     int iRepetition;
 
@@ -216,7 +222,7 @@ int main(void)
         for(int iBuffersizeNum=0; iBuffersizeNum<sizeof(buffer_sizes)/sizeof(int); iBuffersizeNum++)
         {
             int iBufferSize = buffer_sizes[iBuffersizeNum];
-            for(int iStrideNum=0; iStrideNum<sizeof(strides)/sizeof(int); iStrideNum++)
+            for(int iStrideNum=0; iStrideNum<countStrides; iStrideNum++)
             {
                 int iStride = strides[iStrideNum];
                 /* prepare interesting input test data depending on input data type */
@@ -225,28 +231,28 @@ int main(void)
                 {
                     case int8:
                     {
-                        signed char *pBuff = (signed char *)inputBuffer;
+                        signed char *pBuff = (signed char *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                             pBuff[iEntry*iStride] = (iEntry % 256) - 128;
                         break;
                     }
                     case uint8:
                     {
-                        unsigned char *pBuff = (unsigned char *)inputBuffer;
+                        unsigned char *pBuff = (unsigned char *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                             pBuff[iEntry*iStride] = (iEntry % 256);
                         break;
                     }
                     case int16:
                     {
-                        PaInt16 *pBuff = (PaInt16 *)inputBuffer;
+                        PaInt16 *pBuff = (PaInt16 *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                             pBuff[iEntry*iStride] = ((iEntry % 256) - 128) * 256;
                         break;
                     }
                     case int24:
                     {
-                        unsigned char *pBuff = (unsigned char*) inputBuffer;
+                        unsigned char *pBuff = (unsigned char*) sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                         {
                             PaInt32 value = ((iEntry % 256) - 128) * 256 * 256;
@@ -265,56 +271,105 @@ int main(void)
                     }
                     case int32:
                     {
-                        PaInt32 *pBuff = (PaInt32 *)inputBuffer;
+                        PaInt32 *pBuff = (PaInt32 *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                             pBuff[iEntry*iStride] = ((iEntry % 256) - 128) * 256 * 256 * 256;
                         break;
                     }
                     case float32:
                     {
-                        float *pBuff = (float *)inputBuffer;
+                        float *pBuff = (float *)sourceBuffer;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                             pBuff[iEntry*iStride] = ((float)((iEntry % 256) - 128)) / 128.0;
                         break;
                     }
                 }
 
-                printf ("Starting %s / size %i / stride %i...\n",
-                    table[iConverter].name, iBufferSize, iStride);
-
-                /* Run without acceleration */
+                /* Run without acceleration stride source */
                 withAcceleration = 0;
                 PaUtil_InitializeTriangularDitherState(&dither);
-                clock_t tNoAccel = clock();
+                clock_t tNoAccelSource = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)outputBuffer,
-                        iStride,
-                        (void *)inputBuffer,
+                        (void *)destBuffer,
+                        1,
+                        (void *)sourceBuffer,
                         iStride,
                         iBufferSize,
                         &dither );
                 }
-                float fTimeNoAccel = ((float)(clock() - tNoAccel)) / CLOCKS_PER_SEC;
-                printf ("Without acceleration took %f seconds.\n", fTimeNoAccel);
+                timeNoAccelStrideSource[iStrideNum] = ((float)(clock() - tNoAccelSource)) / CLOCKS_PER_SEC;
 
-                /* Run with acceleration */
+                /* Run without acceleration stride dest */
+                withAcceleration = 0;
+                PaUtil_InitializeTriangularDitherState(&dither);
+                clock_t tNoAccelDest = clock();
+                for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
+                {
+                    table[iConverter].pConverter(
+                        (void *)destBuffer,
+                        iStride,
+                        (void *)sourceBuffer,
+                        1,
+                        iBufferSize,
+                        &dither );
+                }
+                timeNoAccelStrideDest[iStrideNum] = ((float)(clock() - tNoAccelDest)) / CLOCKS_PER_SEC;
+
+                /* Run with acceleration  stride source */
                 withAcceleration = 1;
                 PaUtil_InitializeTriangularDitherState(&dither);
-                clock_t tAccel = clock();
+                clock_t tAccelSource = clock();
                 for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
                 {
                     table[iConverter].pConverter(
-                        (void *)outputBuffer,
-                        iStride,
-                        (void *)inputBuffer,
+                        (void *)destBuffer,
+                        1,
+                        (void *)sourceBuffer,
                         iStride,
                         iBufferSize,
                         &dither );
                 }
-                float fTimeAccel = ((float)(clock() - tAccel)) / CLOCKS_PER_SEC;
-                printf ("With acceleration took %f seconds.\n", fTimeAccel);
+                timeAccelStrideSource[iStrideNum] = ((float)(clock() - tAccelSource)) / CLOCKS_PER_SEC;
+
+                /* Run with acceleration  stride dest */
+                withAcceleration = 1;
+                PaUtil_InitializeTriangularDitherState(&dither);
+                clock_t tAccelDest = clock();
+                for(iRepetition=0; iRepetition<iRetryPerCase; iRepetition++)
+                {
+                    table[iConverter].pConverter(
+                        (void *)destBuffer,
+                        iStride,
+                        (void *)sourceBuffer,
+                        1,
+                        iBufferSize,
+                        &dither );
+                }
+                timeAccelStrideDest[iStrideNum] = ((float)(clock() - tAccelDest)) / CLOCKS_PER_SEC;
+
+                printf ("%s Accel=0 / size %i / stride(S%i,D1) %.6f sec stride(S1,D%i) %.6f sec\n",
+                    table[iConverter].name,
+                    iBufferSize,
+                    iStride,
+                    timeNoAccelStrideSource[iStrideNum],
+                    iStride,
+                    timeNoAccelStrideDest[iStrideNum]);
+                printf ("%s Accel=1 / size %i / stride(S%i,D1) %.6f sec stride(S1,D%i) %.6f sec\n",
+                    table[iConverter].name,
+                    iBufferSize,
+                    iStride,
+                    timeAccelStrideSource[iStrideNum],
+                    iStride,
+                    timeAccelStrideDest[iStrideNum]);
+                printf ("%s size %i / stride(S%i,D1) %.2f %% stride(S1,D%i) %.2f %%\n",
+                    table[iConverter].name,
+                    iBufferSize,
+                    iStride,
+                    ((timeNoAccelStrideSource[iStrideNum] / timeAccelStrideSource[iStrideNum]) - 1.0) * 100.0,
+                    iStride,
+                    ((timeNoAccelStrideDest[iStrideNum] / timeAccelStrideDest[iStrideNum]) - 1.0) * 100.0);
                 printf ("\n");
             }
         }
