@@ -427,9 +427,10 @@ static void Float32_To_Int32(
     (void)ditherGenerator; /* unused parameter */
 
 #ifdef __ARM_NEON__
-    if(withAcceleration)
+    /* simple transformations accelerate only unstrided */
+    if(withAcceleration && sourceStride == 1 && destinationStride == 1)
     {
-        float32x4_t neonSourceVector, neonScaled;
+        float32x4_t neonSourceVector;
         int32x4_t neonResultVector;
         float32x4_t neonMult = vdupq_n_f32(0x7FFFFFFF);
         while(count >= ARM_NEON_BEST_VECTOR_SIZE)
@@ -437,10 +438,8 @@ static void Float32_To_Int32(
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(src, sourceStride);
             src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
-            /* scale vector */
-            neonScaled = vmulq_f32(neonSourceVector, neonMult);
-            /* convert vector - not rounded */
-            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* scale & convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(vmulq_f32(neonSourceVector, neonMult));
             /* write result */
             NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
             dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
@@ -534,19 +533,15 @@ static void Float32_To_Int32_Clip(
 #ifdef __ARM_NEON__
     if(withAcceleration)
     {
-        float32x4_t neonSourceVector, neonScaled;
+        float32x4_t neonSourceVector;
         int32x4_t neonResultVector;
         while(count >= ARM_NEON_BEST_VECTOR_SIZE)
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(src, sourceStride);
             src += sourceStride * ARM_NEON_BEST_VECTOR_SIZE;
-            /* scale vector */
-            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
-            /* clip vector */
-            neonScaled = NeonClipVector(neonScaled);
-            /* convert vector - not rounded */
-            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* scale & clip & convert vector - not rounded */
+            neonResultVector = vcvtq_s32_f32(NeonClipVector(vmulq_n_f32(neonSourceVector, 0x7FFFFFFF)));
             /* write result */
             NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
             dest += destinationStride * ARM_NEON_BEST_VECTOR_SIZE;
