@@ -428,7 +428,7 @@ static void Float32_To_Int32(
 
 #ifdef __ARM_NEON__
     /* simple transformations accelerate only unstrided */
-    if(withAcceleration && sourceStride == 1 && destinationStride == 1)
+    if(withAcceleration /*&& sourceStride == 1 && destinationStride == 1*/)
     {
         float32x4_t neonSourceVector;
         int32x4_t neonResultVector;
