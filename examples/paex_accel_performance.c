@@ -172,14 +172,20 @@ int main(void)
 
     /* test all converters for performance and correct data */
     int iCountConverters = 58;  /* set max entry+1 below */
+
     /* Create our converter table */
     PaUtilConverterTablePerf table[iCountConverters];
+    /* Zero mem -> We can simpl reduce number of test by comenting out
+     * ADD_TAB_ENTRY below
+     */
+    memset(table, 0, sizeof(table));
+
     ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
     ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);
     ADD_TAB_ENTRY(2,  Float32_To_Int32_Clip, float32, int32);
     ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32);
 
-    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24);
+/*    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24);
     ADD_TAB_ENTRY(5,  Float32_To_Int24_Dither, float32, int24);
     ADD_TAB_ENTRY(6,  Float32_To_Int24_Clip, float32, int24);
     ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24);
@@ -241,7 +247,7 @@ int main(void)
     ADD_TAB_ENTRY(54, Copy_8_To_8, int8, int8);
     ADD_TAB_ENTRY(55, Copy_16_To_16, int16, int16);
     ADD_TAB_ENTRY(56, Copy_24_To_24, int24, int24);
-    ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32);
+    ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32); */
 
     /* define test tupels */
     int buffer_sizes[] = {64, 256, 1024, MAX_BUFFLEN};
@@ -264,8 +270,11 @@ int main(void)
 
     int iRepetition;
 
-    for(int iConverter=0; iConverter<4/*iCountConverters*/; iConverter++)
+    for(int iConverter=0; iConverter<iCountConverters; iConverter++)
     {
+        if(table[iConverter].pConverter == NULL)
+            continue;
+
         for(int iBuffersizeNum=0; iBuffersizeNum<sizeof(buffer_sizes)/sizeof(int); iBuffersizeNum++)
         {
             int iBufferSize = buffer_sizes[iBuffersizeNum];
