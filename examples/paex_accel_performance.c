@@ -379,7 +379,8 @@ int main(void)
                         float fValue, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                         {
-                            fValue = ((float)((iEntry % 256) - 128)) / 128.0;
+                            /* Divider is 120 instead of 128 to test clipping */
+                            fValue = ((float)((iEntry % 256) - 128)) / 120.0;
                             /* no stride */
                             pBuff = (float *)sourceBuffer;
                             pBuff[iEntry] = fValue;
