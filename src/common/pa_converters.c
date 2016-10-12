@@ -105,9 +105,9 @@ static inline float32x4_t NeonClipVector(
     float32x4_t neonVector)
 {
     float32x4_t neonClipMax = vdupq_n_f32(2147483647.f);
-    neonVector = vmaxq_f32(neonVector, neonClipMax);
+    neonVector = vminq_f32(neonVector, neonClipMax);
     float32x4_t neonClipMin = vdupq_n_f32(-2147483648.f);
-    neonVector = vminq_f32(neonVector, neonClipMin);
+    neonVector = vmaxq_f32(neonVector, neonClipMin);
     return neonVector;
 }
 
