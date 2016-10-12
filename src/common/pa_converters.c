@@ -130,7 +130,7 @@ static inline PaInt32 *NeonWriteDestVectorInt32(
     return dest;
 }
 
-static inline void NeonWriteDestVectorInt24(
+static inline unsigned char *NeonWriteDestVectorInt24(
     int32x4_t neonResultVector, unsigned char *dest, signed int destinationStride)
 {
     int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
@@ -149,7 +149,9 @@ static inline void NeonWriteDestVectorInt24(
         dest[1] = (unsigned char)(temp >> 16);
         dest[2] = (unsigned char)(temp >> 8);
 #endif
+        dest += 3*destinationStride;
     }
+    return dest;
 }
 
 #endif /* __ARM_NEON__ */
@@ -654,8 +656,7 @@ static void Float32_To_Int24(
             /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
-            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
-            dest += destinationStride * 3;
+            dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
     }
@@ -711,8 +712,7 @@ static void Float32_To_Int24_Dither(
             /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
-            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
-            dest += destinationStride * 3;
+            dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
     }
@@ -774,7 +774,7 @@ static void Float32_To_Int24_Clip(
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
-            dest += destinationStride * 3;
+            dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
     }
@@ -834,7 +834,7 @@ static void Float32_To_Int24_DitherClip(
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
             NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
-            dest += destinationStride * 3;
+            dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
     }
