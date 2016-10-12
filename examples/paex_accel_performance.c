@@ -283,50 +283,58 @@ int main(void)
                 {
                     case int8:
                     {
-                        /* no stride */
-                        unsigned char i8Value = (iEntry % 256) - 128;
-                        signed char *pBuff = (signed char *)sourceBuffer;
+                        unsigned char i8Value, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            i8Value = (iEntry % 256) - 128;
+                            /* no stride */
+                            *pBuff = (signed char *)sourceBuffer;
                             pBuff[iEntry] = i8Value;
-                        /* stride */
-                        pBuff = (signed char *)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            /* stride */
+                            pBuff = (signed char *)sourceBufferStride;
                             pBuff[iEntry*iStride] = i8Value;
+                        }
                         break;
                     }
                     case uint8:
                     {
-                        /* no stride */
-                        unsigned char ui8Value = (iEntry % 256);
-                        unsigned char *pBuff = (unsigned char *)sourceBuffer;
+                        unsigned char ui8Value, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            ui8Value = (iEntry % 256);
+                            /* no stride */
+                            pBuff = (unsigned char *)sourceBuffer;
                             pBuff[iEntry] = ui8Value;
-                        /* stride */
-                        pBuff = (unsigned char *)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            /* stride */
+                            pBuff = (unsigned char *)sourceBufferStride;
                             pBuff[iEntry*iStride] = ui8Value;
+                        }
                         break;
                     }
                     case int16:
                     {
-                        /* no stride */
-                        PaInt16 i16Value = ((iEntry % 256) - 128) * 256;
-                        PaInt16 *pBuff = (PaInt16 *)sourceBuffer;
+                        PaInt16 i16Value, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            i16Value = ((iEntry % 256) - 128) * 256;
+                            /* no stride */
+                            pBuff = (PaInt16 *)sourceBuffer;
                             pBuff[iEntry] = i16Value;
-                        /* stride */
-                        pBuff = (PaInt16 *)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            /* stride */
+                            pBuff = (PaInt16 *)sourceBufferStride;
                             pBuff[iEntry*iStride] = i16Value;
+                        }
                         break;
                     }
                     case int24:
                     {
                         unsigned char *pBuff = (unsigned char*)sourceBuffer;
+                        PaInt32 value;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
                         {
+                            value = ((iEntry % 256) - 128) * 256 * 256;
                             /* no stride */
-                            PaInt32 value = ((iEntry % 256) - 128) * 256 * 256;
+                            pBuff = (unsigned char*)sourceBuffer + 3*iEntry;
                             #if defined(PA_LITTLE_ENDIAN)
                                     pBuff[0] = (unsigned char)(value >> 0);
                                     pBuff[1] = (unsigned char)(value >> 8);
@@ -336,13 +344,8 @@ int main(void)
                                     pBuff[1] = (unsigned char)(value >> 8);
                                     pBuff[2] = (unsigned char)(value >> 0);
                             #endif
-                            pBuff += 3;
-                        }
-                        /* stride */
-                        pBuff = (unsigned char*)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
-                        {
-                            PaInt32 value = ((iEntry % 256) - 128) * 256 * 256;
+                            /* stride */
+                            pBuff = (unsigned char*)sourceBufferStride + 3*iEntry*iStride;
                             #if defined(PA_LITTLE_ENDIAN)
                                     pBuff[0] = (unsigned char)(value >> 0);
                                     pBuff[1] = (unsigned char)(value >> 8);
@@ -352,34 +355,38 @@ int main(void)
                                     pBuff[1] = (unsigned char)(value >> 8);
                                     pBuff[2] = (unsigned char)(value >> 0);
                             #endif
-                            pBuff += 3*iStride;
                         }
                         break;
                     }
                     case int32:
                     {
                         /* no stride */
-                        PaInt32 i32Value = ((iEntry % 256) - 128) * 256 * 256 * 256;
-                        PaInt32 *pBuff = (PaInt32 *)sourceBuffer;
+                        PaInt32 i32Value, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            i32Value = ((iEntry % 256) - 128) * 256 * 256 * 256;
+                            /* no stride */
+                            pBuff = (PaInt32 *)sourceBuffer;
                             pBuff[iEntry] = i32Value;
-                        /* stride */
-                        pBuff = (PaInt32 *)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            /* stride */
+                            pBuff = (PaInt32 *)sourceBufferStride;
                             pBuff[iEntry*iStride] = i32Value;
+                        }
                         break;
                     }
                     case float32:
                     {
-                        /* no stride */
-                        float fValue = ((float)((iEntry % 256) - 128)) / 128.0;;
-                        float *pBuff = (float *)sourceBuffer;
+                        float fValue, *pBuff;
                         for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                        {
+                            fValue = ((float)((iEntry % 256) - 128)) / 128.0;
+                            /* no stride */
+                            pBuff = (float *)sourceBuffer;
                             pBuff[iEntry] = fValue;
-                        /* stride */
-                        pBuff = (float *)sourceBufferStride;
-                        for(iEntry=0; iEntry<iBufferSize; iEntry++)
+                            /* stride */
+                            pBuff = (float *)sourceBufferStride;
                             pBuff[iEntry*iStride] = fValue;
+                        }
                         break;
                     }
                 }
