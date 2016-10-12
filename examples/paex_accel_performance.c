@@ -181,14 +181,14 @@ int main(void)
     memset(table, 0, sizeof(table));
 
     ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
-    ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);
+    /*ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);*/
     ADD_TAB_ENTRY(2,  Float32_To_Int32_Clip, float32, int32);
-    ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32);
+    /*ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32);*/
 
-/*    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24);
-    ADD_TAB_ENTRY(5,  Float32_To_Int24_Dither, float32, int24);
+    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24);
+/*    ADD_TAB_ENTRY(5,  Float32_To_Int24_Dither, float32, int24);*/
     ADD_TAB_ENTRY(6,  Float32_To_Int24_Clip, float32, int24);
-    ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24);
+    /*ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24);
 
     ADD_TAB_ENTRY(8,  Float32_To_Int16, float32, int16);
     ADD_TAB_ENTRY(9,  Float32_To_Int16_Dither, float32, int16);
