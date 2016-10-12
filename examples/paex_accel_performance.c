@@ -108,7 +108,7 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
         if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem]) \
         { \
             if(errorNoStride < MaxValueErrorMsg) \
-                printf ("AccelError at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                printf ("AccelError " #_DATATYPE " at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
                     iDestElem, \
                     pBuffAccelNoStride[iDestElem], \
                     pBuffNoAccelNoStride[iDestElem]); \
@@ -117,7 +117,7 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
         if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride]) \
         { \
             if(errorStride < MaxValueErrorMsg) \
-                printf ("AccelError stride %i at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                printf ("AccelError " #_DATATYPE " stride %i at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
                     iStride, \
                     iDestElem, \
                     pBuffAccelStride[iDestElem*iStride], \
@@ -482,7 +482,7 @@ int main(void)
                 int errorStride = 0;
                 const int MaxValueErrorMsg = 8;
                 /* contents depend on destination data type */
-                switch(table[iConverter].inDataType)
+                switch(table[iConverter].outDataType)
                 {
                     case int8:
                     {
@@ -512,7 +512,7 @@ int main(void)
                                 pBuffNoAccelNoStride[iDestElem*3 + 2] != pBuffAccelNoStride[iDestElem*3 + 2])
                             {
                                 if(errorNoStride < MaxValueErrorMsg)
-                                    printf ("AccelError no stride at element %i: %i expected %i\n",
+                                    printf ("AccelError int24 at element %i: %i expected %i\n",
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
                                         _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3));
@@ -523,7 +523,7 @@ int main(void)
                                 pBuffNoAccelStride[iDestElem*iStride*3 + 2] != pBuffAccelStride[iDestElem*iStride*3 + 2])
                             {
                                 if(errorStride < MaxValueErrorMsg)
-                                    printf ("AccelError stride %i at element %i: %i expected %i\n",
+                                    printf ("AccelError int24 stride %i at element %i: %i expected %i\n",
                                         iStride,
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
@@ -549,7 +549,7 @@ int main(void)
                             if(fabs(pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem]) > 1.0 / 2147483648.0)
                             {
                                 if(errorNoStride < MaxValueErrorMsg)
-                                    printf ("AccelError no stride at element %i: %.12f expected %.12f\n",
+                                    printf ("AccelError float at element %i: %.12f expected %.12f\n",
                                         iDestElem,
                                         pBuffAccelNoStride[iDestElem],
                                         pBuffNoAccelNoStride[iDestElem]);
@@ -558,7 +558,7 @@ int main(void)
                             if(fabs(pBuffNoAccelStride[iDestElem*iStride]-pBuffAccelStride[iDestElem*iStride]) > 1.0 / 2147483648.0)
                             {
                                 if(errorStride < MaxValueErrorMsg)
-                                    printf ("AccelError stride %i at element %i: %.12f expected %.12f\n",
+                                    printf ("AccelError float stride %i at element %i: %.12f expected %.12f\n",
                                         iStride,
                                         iDestElem,
                                         pBuffAccelStride[iDestElem*iStride],
