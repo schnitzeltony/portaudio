@@ -133,23 +133,91 @@ static inline PaInt32 *NeonWriteDestVectorInt32(
 static inline unsigned char *NeonWriteDestVectorInt24(
     int32x4_t neonResultVector, unsigned char *dest, signed int destinationStride)
 {
-    int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
-    int lane;
-    PaInt32 temp;
-    vst1q_s32(resultVector32, neonResultVector);
-    for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+    switch(destinationStride)
     {
-        temp = resultVector32[lane];
-#if defined(PA_LITTLE_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 8);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 24);
-#elif defined(PA_BIG_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 24);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 8);
+#if 0
+        case 1:
+        {
+            /* 1. compress incoming neon data to the center 8 bit lanes
+             * 2. move left
+             * 3. store in 2 memory transactions only
+             *
+             * |24Bit0|x|24Bit1|x|24Bit2|x|24Bit3|x|
+             *                  |
+             *                  v
+             * |x|x|24Bit0|24Bit1|24Bit2|24Bit3|x|x|
+             *                  |
+             *                  v
+             * |24Bit0|24Bit1|24Bit2|24Bit3|x|x|x|x|
+             * |           96Bit           |x|x|x|x|
+             *               store as
+             * |      64Bit     |  32Bit   |x|x|x|x|
+             *
+             * Note 1: Table actions can only be performed on 64 Bit D registers
+             *         (see indexes below)
+             * Note 2: x (empty/0) -> 8
+             *
+             * see more detals on neon table permutation at
+             * https://community.arm.com/groups/processors/blog/authors/martynarm
+             */
+            uint8_t compressPositions[] =
+            {
+            #if defined(PA_LITTLE_ENDIAN) /* that's us */
+                8, 8, 7, 6, 5, 3, 2, 1, /* D0 */
+                7, 6, 5, 3, 1, 2, 8, 8  /* D1 */
+            #elif defined(PA_BIG_ENDIAN)
+                8, 8, 7, 6, 5, 3, 2, 1, /* D0 */
+                7, 6, 5, 3, 1, 2, 8, 8  /* D1 */
+            #endif
+            };
+            uint8x16_t neonTableTranslation = vld1q_u8(compressPositions);
+            /* table operations are avaliable for 8 Bit lanes only */
+            uint8x16_t neonCastedResult = vreinterpretq_u8_s32(neonResultVector);
+            /* table magic twice */
+            uint8x8_t neonValuesLeft = vtbl1_u8(
+                vget_high_u8(neonTableTranslation),
+                vget_high_u8(neonCastedResult));
+            uint8x8_t neonValuesRight = vtbl1_u8(
+                vget_low_u8(neonTableTranslation),
+                vget_low_u8(neonCastedResult));
+            /* Interpret center compressed back to one Q uint8x16_t */
+            uint8x16_t neonCompressed24Result = vcombine_u8(neonValuesLeft, neonValuesRight);
+
+            /* move vector left (2.)-> data left aligned */
+            neonCompressed24Result = vextq_u8(neonCompressed24Result, neonCompressed24Result, 6);
+
+            /* store 64+32 */
+            /* 1. left 64 bits / 8 bytes */
+            vst1_lane_u32(dest, vreinterpret_u32_u8(vget_high_u8(neonCompressed24Result)), 0);
+            /* 2. remaining 32 bits / 4 bytes */
+            vst1q_lane_u32(dest+8, vreinterpretq_u32_u8(neonCompressed24Result), 2);
+            dest += 8+4;
+            break;
+        }
 #endif
-        dest += 3*destinationStride;
+        default:
+        {
+            /* Get data out of neon to handle it 'traditional' */
+            PaUint32 resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+            vst1q_u32(resultVector32, vreinterpretq_u32_s32(neonResultVector));
+            PaUint32 temp;
+            int lane;
+            for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+            {
+                temp = resultVector32[lane];
+                #if defined(PA_LITTLE_ENDIAN)
+                    dest[0] = (unsigned char)(temp >> 8);
+                    dest[1] = (unsigned char)(temp >> 16);
+                    dest[2] = (unsigned char)(temp >> 24);
+                #elif defined(PA_BIG_ENDIAN)
+                    dest[0] = (unsigned char)(temp >> 24);
+                    dest[1] = (unsigned char)(temp >> 16);
+                    dest[2] = (unsigned char)(temp >> 8);
+                #endif
+                dest += 3*destinationStride;
+            }
+            break;
+        }
     }
     return dest;
 }
