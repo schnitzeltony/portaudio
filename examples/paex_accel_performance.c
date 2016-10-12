@@ -133,46 +133,41 @@ int main(void)
 {
     /* create dither instance */
     PaUtilTriangularDitherGenerator dither;
-    #define DITHER_TEST_SIZE 16
 
     /* test proper working float dither generator */
     withAcceleration = 0;
     PaUtil_InitializeTriangularDitherState(&dither);
-    float dithersOrig[DITHER_TEST_SIZE];
+    float dithersOrig[MAX_BUFFLEN];
     int iDither;
-    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+    for(iDither=0; iDither<MAX_BUFFLEN; iDither++)
         dithersOrig[iDither] = PaUtil_GenerateFloatTriangularDither(&dither);
 
 #ifdef __ARM_NEON__
     withAcceleration = 1;
     PaUtil_InitializeTriangularDitherState(&dither);
-    float dithersAccel[DITHER_TEST_SIZE];
+    float dithersAccel[MAX_BUFFLEN];
     float32x4_t neonDither;
-    for(iDither=0; iDither<DITHER_TEST_SIZE/ARM_NEON_BEST_VECTOR_SIZE; iDither++)
+    for(iDither=0; iDither<MAX_BUFFLEN/ARM_NEON_BEST_VECTOR_SIZE; iDither++)
     {
         neonDither = PaUtil_GenerateFloatTriangularDitherVector(&dither);
         vst1q_f32(dithersAccel+(iDither*ARM_NEON_BEST_VECTOR_SIZE), neonDither);
     }
     /* check dither for equality */
-    int errorsdetected = 0;
-    for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
+    int errorCountDither = 0;
+    for(iDither=0; iDither<MAX_BUFFLEN; iDither++)
     {
-        if(fabs(dithersOrig[iDither] - dithersAccel[iDither]) > 1e-5)
-            errorsdetected++;
+        if(fabs(dithersOrig[iDither] - dithersAccel[iDither]) > 1e-15)
+        {
+            if(errorCountDither < 16)
+            {
+                printf("Accel dither test error at %i: %.15f expected %.15f\n",
+                    iDither,
+                    dithersAccel[iDither],
+                    dithersOrig[iDither]);
+            }
+            errorCountDither++;
+        }
     }
-    if(errorsdetected)
-    {
-        printf("Error acellerated dither is invalid!");
-        printf("Dither original: ");
-        for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
-            printf("%.3f ", dithersOrig[iDither]);
-        printf("\n");
-        printf("Dither acceller: ");
-        for(iDither=0; iDither<DITHER_TEST_SIZE; iDither++)
-            printf("%.3f ", dithersAccel[iDither]);
-        printf("\n\n");
-    }
-
 #endif
 
     /* test all converters for performance and correct data */
