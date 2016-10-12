@@ -108,19 +108,23 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
         if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem]) \
         { \
             if(errorNoStride < MaxValueErrorMsg) \
-                printf ("AccelError " #_DATATYPE " at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                printf ("AccelError " #_DATATYPE " at element %i: " #_FORMAT "/0x%08X expected " #_FORMAT "/0x%08X\n", \
                     iDestElem, \
                     pBuffAccelNoStride[iDestElem], \
+                    pBuffAccelNoStride[iDestElem], \
+                    pBuffNoAccelNoStride[iDestElem], \
                     pBuffNoAccelNoStride[iDestElem]); \
             errorNoStride++; \
         } \
         if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride]) \
         { \
             if(errorStride < MaxValueErrorMsg) \
-                printf ("AccelError " #_DATATYPE " stride %i at element %i: " #_FORMAT " expected " #_FORMAT "\n", \
+                printf ("AccelError " #_DATATYPE " stride %i at element %i: " #_FORMAT "/0x%08X expected " #_FORMAT "/0x%08X\n", \
                     iStride, \
                     iDestElem, \
                     pBuffAccelStride[iDestElem*iStride], \
+                    pBuffAccelStride[iDestElem*iStride], \
+                    pBuffNoAccelStride[iDestElem*iStride], \
                     pBuffNoAccelStride[iDestElem*iStride]); \
             errorStride++; \
         } \
@@ -517,9 +521,11 @@ int main(void)
                                 pBuffNoAccelNoStride[iDestElem*3 + 2] != pBuffAccelNoStride[iDestElem*3 + 2])
                             {
                                 if(errorNoStride < MaxValueErrorMsg)
-                                    printf ("AccelError int24 at element %i: %i expected %i\n",
+                                    printf ("AccelError int24 at element %i: %i/0x%08X expected %i/0x%08X\n",
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
+                                        _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
+                                        _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3),
                                         _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3));
                                 errorNoStride++;
                             }
@@ -528,10 +534,12 @@ int main(void)
                                 pBuffNoAccelStride[iDestElem*iStride*3 + 2] != pBuffAccelStride[iDestElem*iStride*3 + 2])
                             {
                                 if(errorStride < MaxValueErrorMsg)
-                                    printf ("AccelError int24 stride %i at element %i: %i expected %i\n",
+                                    printf ("AccelError int24 stride %i at element %i/0x%08X: %i expected %i/0x%08X\n",
                                         iStride,
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
+                                        _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
+                                        _Int24_ToIn32(pBuffNoAccelStride + iDestElem*iStride*3),
                                         _Int24_ToIn32(pBuffNoAccelStride + iDestElem*iStride*3));
                                 errorStride++;
                             }
