@@ -292,7 +292,7 @@ int main(void)
                         {
                             i8Value = (iEntry % 256) - 128;
                             /* no stride */
-                            *pBuff = (signed char *)sourceBuffer;
+                            pBuff = (signed char *)sourceBuffer;
                             pBuff[iEntry] = i8Value;
                             /* stride */
                             pBuff = (signed char *)sourceBufferStride;
