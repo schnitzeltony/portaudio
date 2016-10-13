@@ -135,6 +135,8 @@ static inline unsigned char *NeonWriteDestVectorInt24(
 {
     switch(destinationStride)
     {
+        /* Did not find big endian ARM NEON machine for test - so disable this path */
+        #if defined(PA_LITTLE_ENDIAN)
         case 1:
         {
             /* 1. compress incoming neon data to the center 8 bit lanes
@@ -191,6 +193,7 @@ static inline unsigned char *NeonWriteDestVectorInt24(
             dest += 8+4;
             break;
         }
+        #endif /* defined(PA_LITTLE_ENDIAN)*/
         default:
         {
             /* Get data out of neon to handle it 'traditional' */
