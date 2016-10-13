@@ -174,14 +174,14 @@ static inline unsigned char *NeonWriteDestVectorInt24(
             /* table operations are avaliable for 8 Bit lanes only */
             uint8x16_t neonCastedResult = vreinterpretq_u8_s32(neonResultVector);
             /* table magic twice */
-            uint8x8_t neonValuesLeft = vtbl1_u8(
-                vget_high_u8(neonTableTranslation),
-                vget_high_u8(neonCastedResult));
-            uint8x8_t neonValuesRight = vtbl1_u8(
-                vget_low_u8(neonTableTranslation),
-                vget_low_u8(neonCastedResult));
+            uint8x8_t neonValuesHigh = vtbl1_u8(
+                vget_high_u8(neonCastedResult),
+                vget_high_u8(neonTableTranslation));
+            uint8x8_t neonValuesLow = vtbl1_u8(
+                vget_low_u8(neonCastedResult),
+                vget_low_u8(neonTableTranslation));
             /* Interpret center compressed back to one Q uint8x16_t */
-            uint8x16_t neonCompressed24Result = vcombine_u8(neonValuesLeft, neonValuesRight);
+            uint8x16_t neonCompressed24Result = vcombine_u8(neonValuesHigh, neonValuesLow);
 
             /* move vector left (2.)-> data left aligned */
             neonCompressed24Result = vextq_u8(neonCompressed24Result, neonCompressed24Result, 6);
