@@ -131,12 +131,139 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
     }
 
 
+
+
+
+static inline unsigned char *NeonWriteDestVectorInt24(
+    int32x4_t neonResultVector, unsigned char *dest, signed int destinationStride)
+{
+    switch(destinationStride)
+    {
+        case 1:
+        {
+            /* 1. compress incoming neon data to the center 8 bit lanes
+             * 2. move left
+             * 3. store in 2 memory transactions only
+             *
+             * |24Bit0|x|24Bit1|x|24Bit2|x|24Bit3|x|
+             *                  |
+             *                  v
+             * |x|x|24Bit0|24Bit1|24Bit2|24Bit3|x|x|
+             *                  |
+             *                  v
+             * |24Bit0|24Bit1|24Bit2|24Bit3|x|x|x|x|
+             * |           96Bit           |x|x|x|x|
+             *               store as
+             * |      64Bit     |  32Bit   |x|x|x|x|
+             *
+             * Note 1: Table actions can only be performed on 64 Bit D registers
+             *         (see indexes below)
+             * Note 2: x (empty/0) -> 8
+             *
+             * see more detals on neon table permutation at
+             * https://community.arm.com/groups/processors/blog/authors/martynarm
+             */
+            uint8_t compressPositions[] =
+            {
+            #if defined(PA_LITTLE_ENDIAN)
+                8, 8, 1, 2, 3, 5, 6, 7,
+                1, 2, 3, 5, 6, 7, 8, 8
+            #elif defined(PA_BIG_ENDIAN)
+                7, 6, 5, 3, 2, 1, 8, 8,     /* To be tested - have no machin for that */
+                8, 8, 7, 6, 5, 3, 1, 2
+            #endif
+            };
+            uint8x16_t neonTableTranslation = vld1q_u8(compressPositions);
+            /* table operations are avaliable for 8 Bit lanes only */
+            uint8x16_t neonCastedResult = vreinterpretq_u8_s32(neonResultVector);
+            /* table magic twice */
+            uint8x8_t neonValuesHigh = vtbl1_u8(
+                vget_high_u8(neonCastedResult),
+                vget_high_u8(neonTableTranslation));
+            uint8x8_t neonValuesLow = vtbl1_u8(
+                vget_low_u8(neonCastedResult),
+                vget_low_u8(neonTableTranslation));
+            /* Interpret center compressed back to one Q uint8x16_t */
+            uint8x16_t neonCompressed24Result = vcombine_u8(neonValuesLow, neonValuesHigh);
+            /* rotate vector (2.) */
+            neonCompressed24Result = vextq_u8(neonCompressed24Result, neonCompressed24Result, 2);
+            /* store 64+32 */
+            /* 1. 64 bits / 8 bytes */
+            vst1_u32(dest, vreinterpret_u32_u8(vget_low_u8(neonCompressed24Result)));
+            /* 2. 32 bits / 4 bytes */
+            vst1q_lane_u32(dest+8, vreinterpretq_u32_u8(neonCompressed24Result), 2);
+            dest += 8+4;
+            break;
+        }
+        default:
+        {
+            /* Get data out of neon to handle it 'traditional' */
+            PaUint32 resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+            vst1q_u32(resultVector32, vreinterpretq_u32_s32(neonResultVector));
+            PaUint32 temp;
+            int lane;
+            for(lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
+            {
+                temp = resultVector32[lane];
+                #if defined(PA_LITTLE_ENDIAN)
+                    dest[0] = (unsigned char)(temp >> 8);
+                    dest[1] = (unsigned char)(temp >> 16);
+                    dest[2] = (unsigned char)(temp >> 24);
+                #elif defined(PA_BIG_ENDIAN)
+                    dest[0] = (unsigned char)(temp >> 24);
+                    dest[1] = (unsigned char)(temp >> 16);
+                    dest[2] = (unsigned char)(temp >> 8);
+                #endif
+                dest += 3*destinationStride;
+            }
+            break;
+        }
+    }
+    return dest;
+}
+
+
+
 /*******************************************************************/
 int main(void);
 int main(void)
 {
+    int32_t source[] = { 0x11121314, 0x21222324, 0x31323334, 0x41424344 };
+    int32x4_t neonResultVector = vld1q_s32(source);
+
+    int i,j;
+    printf("Orig\n");
+    for(i=0; i<4; i++)
+        printf("%08X\n", source[i]);
+    printf("\n");
+
+    uint8_t dest[32];
+    
+    memset(dest, 0xFF, sizeof(dest));
+    NeonWriteDestVectorInt24(neonResultVector, (unsigned char *)dest, 1);
+    printf("Conv1\n");
+    for(i=0; i<8; i++)
+    {
+        for(j=0; j<4; j++)
+            printf("%02X", dest[i*4+j]);
+        printf("\n");
+    }
+    printf("\n");
+
+    memset(dest, 0xFF, sizeof(dest));
+    NeonWriteDestVectorInt24(neonResultVector, (unsigned char *)dest, 2);
+    printf("Conv2\n");
+    for(i=0; i<8; i++)
+    {
+        for(j=0; j<4; j++)
+            printf("%02X", dest[i*4+j]);
+        printf("\n");
+    }
+    printf("\n");
+
+    return 0;
 #if 0
-    int i;
+    int i
     uint8_t testData[] =
     {
         1, 2, 3, 4, 6, 6, 7, 8, /* D0 */
