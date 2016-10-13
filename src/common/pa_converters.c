@@ -545,23 +545,17 @@ static void Float32_To_Int32_Dither(
 #ifdef __ARM_NEON__
     if(withAcceleration)
     {
-        float32x4_t neonSourceVector, neonScaled, neonDither;
-        int32x4_t neonResultVector;
-        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
-        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
-        {
-            /* get source vector */
-            neonSourceVector = NeonGetSourceVector(&src, sourceStride);
-            /* get dither */
-            neonDither = PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator);
-            /* scale + add dither vmla(a,b,c) <-> a+b*c */
-            neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
-            /* convert vector - rounded towards zero */
-            neonResultVector = vcvtq_s32_f32(neonScaled);
-            /* write result */
-            dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
-            count -= ARM_NEON_BEST_VECTOR_SIZE;
-        }
+        /* ARM NEON does not support doubles so don't dither at 32Bit - there
+         * is no hardware avavailable creating less noise than 32Bit dither...
+         */
+        Float32_To_Int32(
+            destinationBuffer,
+            destinationStride,
+            sourceBuffer,
+            sourceStride,
+            count,
+            ditherGenerator );
+        return;
     }
 #endif
 
@@ -649,25 +643,17 @@ static void Float32_To_Int32_DitherClip(
 #ifdef __ARM_NEON__
     if(withAcceleration)
     {
-        float32x4_t neonSourceVector, neonScaled, neonDither;
-        int32x4_t neonResultVector;
-        float32x4_t neonMult = vdupq_n_f32(2147483646.0f);
-        while( count >= ARM_NEON_BEST_VECTOR_SIZE)
-        {
-            /* get source vector */
-            neonSourceVector = NeonGetSourceVector(&src, sourceStride);
-            /* get dither */
-            neonDither = PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator);
-            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
-            neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
-            /* clip vector */
-            neonScaled = NeonClipVector(neonScaled, -2147483648.f, 2147483647.f);
-            /* convert vector - rounded towards zero */
-            neonResultVector = vcvtq_s32_f32(neonScaled);
-            /* write result */
-            dest = NeonWriteDestVectorInt32(neonResultVector, dest, destinationStride);
-            count-=ARM_NEON_BEST_VECTOR_SIZE;
-        }
+        /* ARM NEON does not support doubles so don't dither at 32Bit - there
+         * is no hardware avavailable creating less noise than 32Bit dither...
+         */
+        Float32_To_Int32(
+            destinationBuffer,
+            destinationStride,
+            sourceBuffer,
+            sourceStride,
+            count,
+            ditherGenerator );
+        return;
     }
 #endif
 

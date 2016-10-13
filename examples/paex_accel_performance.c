@@ -547,7 +547,42 @@ int main(void)
                     }
                     case int32:
                     {
-                        CHECK_BUFFER_ACCEL(PaInt32, %i)
+                        PaInt32 *pBuffNoAccelNoStride = (PaInt32 *)destBuffer;
+                        PaInt32 *pBuffNoAccelStride = (PaInt32 *)destBufferStride;
+                        PaInt32 *pBuffAccelNoStride = (PaInt32 *)destBufferAccel;
+                        PaInt32 *pBuffAccelStride = (PaInt32 *)destBufferAccelStride;
+                        for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
+                        {
+                            #ifdef __ARM_NEON__
+                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated */
+                            if(abs(pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem]) >= 4)
+                            #else
+                            if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem])
+                            #endif
+                            {
+                                if(errorNoStride < MaxValueErrorMsg)
+                                    printf ("AccelError PaInt32 at element %i: %i expected %i\n",
+                                        iDestElem,
+                                        pBuffAccelNoStride[iDestElem],
+                                        pBuffNoAccelNoStride[iDestElem]);
+                                errorNoStride++;
+                            }
+                            #ifdef __ARM_NEON__
+                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated */
+                            if(abs(pBuffNoAccelStride[iDestElem*iStride]-pBuffAccelStride[iDestElem*iStride]) >= 4)
+                            #else
+                            if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride])
+                            #endif
+                            {
+                                if(errorStride < MaxValueErrorMsg)
+                                    printf ("AccelError PaInt32 stride %i at element %i: %i expected %i\n",
+                                        iStride,
+                                        iDestElem,
+                                        pBuffAccelStride[iDestElem*iStride],
+                                        pBuffNoAccelStride[iDestElem*iStride]);
+                                errorStride++;
+                            }
+                        }
                         break;
                     }
                     case float32:
