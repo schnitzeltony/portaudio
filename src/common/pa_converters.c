@@ -135,7 +135,6 @@ static inline unsigned char *NeonWriteDestVectorInt24(
 {
     switch(destinationStride)
     {
-#if 0
         case 1:
         {
             /* 1. compress incoming neon data to the center 8 bit lanes
@@ -194,7 +193,6 @@ static inline unsigned char *NeonWriteDestVectorInt24(
             dest += 8+4;
             break;
         }
-#endif
         default:
         {
             /* Get data out of neon to handle it 'traditional' */

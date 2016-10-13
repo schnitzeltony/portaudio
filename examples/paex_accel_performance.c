@@ -135,6 +135,51 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
 int main(void);
 int main(void)
 {
+#if 0
+    int i;
+    uint8_t testData[] =
+    {
+        1, 2, 3, 4, 6, 6, 7, 8, /* D0 */
+        9,10,11,12,13,14,15,16  /* D1 */
+    };
+    printf("Orig\n");
+    for(i=0; i<16; i++)
+        printf("%i %02X\n", i, testData[i]);
+
+    uint8x16_t neonData = vld1q_u8(testData);
+    int32x4_t neonResultVector = vreinterpretq_s32_u8(neonData);
+
+    uint8_t compressPositions[] =
+    {
+        8, 8, 7, 6, 5, 3, 2, 1, /* D0 */
+        7, 6, 5, 3, 1, 2, 8, 8  /* D1 */
+    };
+    uint8x16_t neonTableTranslation = vld1q_u8(compressPositions);
+    /* table operations are avaliable for 8 Bit lanes only */
+    uint8x16_t neonCastedResult = vreinterpretq_u8_s32(neonResultVector);
+    /* table magic twice */
+    uint8x8_t neonValuesHigh = vtbl1_u8(
+        vget_high_u8(neonCastedResult),
+        vget_high_u8(neonTableTranslation));
+    uint8x8_t neonValuesLow = vtbl1_u8(
+        vget_low_u8(neonCastedResult),
+        vget_low_u8(neonTableTranslation));
+
+    /* Interpret center compressed back to one Q uint8x16_t */
+    uint8x16_t neonCompressed24Result = vcombine_u8(neonValuesHigh, neonValuesLow);
+
+    /* move vector left (2.)-> data left aligned */
+    neonCompressed24Result = vextq_u8(neonCompressed24Result, neonCompressed24Result, 6);
+
+    vst1q_u8(testData, neonCompressed24Result);
+    printf("Conv\n");
+    for(i=0; i<16; i++)
+        printf("%i %u/%02X\n", i, testData[i], testData[i]);
+
+    return 0;
+#endif
+
+
     /* create dither instance */
     PaUtilTriangularDitherGenerator dither;
 
@@ -184,8 +229,8 @@ int main(void)
      */
     memset(table, 0, sizeof(table));
 
-    ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
-    /*ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);*/
+    /*ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
+    ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);
     ADD_TAB_ENTRY(2,  Float32_To_Int32_Clip, float32, int32);
     /*ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32);*/
 
