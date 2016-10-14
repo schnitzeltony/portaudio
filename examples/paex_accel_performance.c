@@ -490,7 +490,7 @@ int main(void)
                 /* Check for valid contents in destination buffers */
                 int errorNoStride = 0;
                 int errorStride = 0;
-                const int MaxValueErrorMsg = 8;
+                const int MaxValueErrorMsg = 32;
                 /* contents depend on destination data type */
                 switch(table[iConverter].outDataType)
                 {
