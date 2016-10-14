@@ -69,15 +69,17 @@ typedef struct {
     PaUtilConverter *pConverter;
     PaDataTypes inDataType;
     PaDataTypes outDataType;
+    int Dither;
     char name[256];
 } PaUtilConverterTablePerf;
 
-/*******************************************************************/
+/***********************************************************************/
 /* some helpers */
-#define ADD_TAB_ENTRY(_num, _name, _inDataType, _outDataType) \
+#define ADD_TAB_ENTRY(_num, _name, _inDataType, _outDataType, _Dither) \
     table[_num].pConverter = paConverters._name; \
     table[_num].inDataType = _inDataType; \
     table[_num].outDataType = _outDataType; \
+    table[_num].Dither = _Dither; \
     strcpy(table[_num].name, #_name);
 
 
@@ -183,74 +185,74 @@ int main(void)
      */
     memset(table, 0, sizeof(table));
 
-    ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32);
-    ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32);
-    ADD_TAB_ENTRY(2,  Float32_To_Int32_Clip, float32, int32);
-    ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32);
+    ADD_TAB_ENTRY(0,  Float32_To_Int32, float32, int32, 0);
+    ADD_TAB_ENTRY(1,  Float32_To_Int32_Dither, float32, int32, 1);
+    ADD_TAB_ENTRY(2,  Float32_To_Int32_Clip, float32, int32, 0);
+    ADD_TAB_ENTRY(3,  Float32_To_Int32_DitherClip, float32, int32, 1);
 
-    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24);
-    ADD_TAB_ENTRY(5,  Float32_To_Int24_Dither, float32, int24);
-    ADD_TAB_ENTRY(6,  Float32_To_Int24_Clip, float32, int24);
-    ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24);
+    ADD_TAB_ENTRY(4,  Float32_To_Int24, float32, int24, 0);
+    ADD_TAB_ENTRY(5,  Float32_To_Int24_Dither, float32, int24, 1);
+    ADD_TAB_ENTRY(6,  Float32_To_Int24_Clip, float32, int24, 0);
+    ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24, 1);
 
-    /*ADD_TAB_ENTRY(8,  Float32_To_Int16, float32, int16);
-    ADD_TAB_ENTRY(9,  Float32_To_Int16_Dither, float32, int16);
-    ADD_TAB_ENTRY(10, Float32_To_Int16_Clip, float32, int16);
-    ADD_TAB_ENTRY(11, Float32_To_Int16_DitherClip, float32, int16);
+    /*ADD_TAB_ENTRY(8,  Float32_To_Int16, float32, int16, 0);
+    ADD_TAB_ENTRY(9,  Float32_To_Int16_Dither, float32, int16, 1);
+    ADD_TAB_ENTRY(10, Float32_To_Int16_Clip, float32, int16, 0);
+    ADD_TAB_ENTRY(11, Float32_To_Int16_DitherClip, float32, int16, 1);
 
-    ADD_TAB_ENTRY(12, Float32_To_Int8, float32, int8);
-    ADD_TAB_ENTRY(13, Float32_To_Int8_Dither, float32, int8);
-    ADD_TAB_ENTRY(14, Float32_To_Int8_Clip, float32, int8);
-    ADD_TAB_ENTRY(15, Float32_To_Int8_DitherClip, float32, int8);
+    ADD_TAB_ENTRY(12, Float32_To_Int8, float32, int8, 0);
+    ADD_TAB_ENTRY(13, Float32_To_Int8_Dither, float32, int8, 1);
+    ADD_TAB_ENTRY(14, Float32_To_Int8_Clip, float32, int8, 0);
+    ADD_TAB_ENTRY(15, Float32_To_Int8_DitherClip, float32, int8, 1);
 
-    ADD_TAB_ENTRY(16, Float32_To_UInt8, float32, uint8);
-    ADD_TAB_ENTRY(17, Float32_To_UInt8_Dither, float32, uint8);
-    ADD_TAB_ENTRY(18, Float32_To_UInt8_Clip, float32, uint8);
-    ADD_TAB_ENTRY(19, Float32_To_UInt8_DitherClip, float32, uint8);
+    ADD_TAB_ENTRY(16, Float32_To_UInt8, float32, uint8, 0);
+    ADD_TAB_ENTRY(17, Float32_To_UInt8_Dither, float32, uint8, 1);
+    ADD_TAB_ENTRY(18, Float32_To_UInt8_Clip, float32, uint8, 0);
+    ADD_TAB_ENTRY(19, Float32_To_UInt8_DitherClip, float32, uint8, 1);
 
-    ADD_TAB_ENTRY(20, Int32_To_Float32, int32, float32);
-    ADD_TAB_ENTRY(21, Int32_To_Int24, int32, int24);
-    ADD_TAB_ENTRY(22, Int32_To_Int24_Dither, int32, int24);
-    ADD_TAB_ENTRY(23, Int32_To_Int16, int32, int16);
-    ADD_TAB_ENTRY(24, Int32_To_Int16_Dither, int32, int16);
-    ADD_TAB_ENTRY(25, Int32_To_Int8, int32, int8);
-    ADD_TAB_ENTRY(26, Int32_To_Int8_Dither, int32, int8);
-    ADD_TAB_ENTRY(27, Int32_To_UInt8, int32, uint8);
-    ADD_TAB_ENTRY(28, Int32_To_UInt8_Dither, int32, uint8);
+    ADD_TAB_ENTRY(20, Int32_To_Float32, int32, float32, 0);
+    ADD_TAB_ENTRY(21, Int32_To_Int24, int32, int24, 0);
+    ADD_TAB_ENTRY(22, Int32_To_Int24_Dither, int32, int24, 1);
+    ADD_TAB_ENTRY(23, Int32_To_Int16, int32, int16, 1);
+    ADD_TAB_ENTRY(24, Int32_To_Int16_Dither, int32, int16, 1);
+    ADD_TAB_ENTRY(25, Int32_To_Int8, int32, int8, 0);
+    ADD_TAB_ENTRY(26, Int32_To_Int8_Dither, int32, int8, 1);
+    ADD_TAB_ENTRY(27, Int32_To_UInt8, int32, uint8, 0);
+    ADD_TAB_ENTRY(28, Int32_To_UInt8_Dither, int32, uint8, 1);
 
-    ADD_TAB_ENTRY(29, Int24_To_Float32, int24, float32);
-    ADD_TAB_ENTRY(30, Int24_To_Int32, int24, int32);
-    ADD_TAB_ENTRY(31, Int24_To_Int16, int24, int16);
-    ADD_TAB_ENTRY(32, Int24_To_Int16_Dither, int24, int16);
-    ADD_TAB_ENTRY(33, Int24_To_Int8, int24, int8);
-    ADD_TAB_ENTRY(34, Int24_To_Int8_Dither, int24, int8);
-    ADD_TAB_ENTRY(35, Int24_To_UInt8, int24, uint8);
-    ADD_TAB_ENTRY(36, Int24_To_UInt8_Dither, int24, uint8);
+    ADD_TAB_ENTRY(29, Int24_To_Float32, int24, float32, 0);
+    ADD_TAB_ENTRY(30, Int24_To_Int32, int24, int32), 0;
+    ADD_TAB_ENTRY(31, Int24_To_Int16, int24, int16, 0);
+    ADD_TAB_ENTRY(32, Int24_To_Int16_Dither, int24, int16, 1);
+    ADD_TAB_ENTRY(33, Int24_To_Int8, int24, int8, 0);
+    ADD_TAB_ENTRY(34, Int24_To_Int8_Dither, int24, int8, 1);
+    ADD_TAB_ENTRY(35, Int24_To_UInt8, int24, uint8, 0);
+    ADD_TAB_ENTRY(36, Int24_To_UInt8_Dither, int24, uint8, 1);
 
-    ADD_TAB_ENTRY(37, Int16_To_Float32, int16, float32);
-    ADD_TAB_ENTRY(38, Int16_To_Int32, int16, int32);
-    ADD_TAB_ENTRY(39, Int16_To_Int24, int16, int24);
-    ADD_TAB_ENTRY(40, Int16_To_Int8, int16, int8);
-    ADD_TAB_ENTRY(41, Int16_To_Int8_Dither, int16, int8);
-    ADD_TAB_ENTRY(42, Int16_To_UInt8, int16, uint8);
-    ADD_TAB_ENTRY(43, Int16_To_UInt8_Dither, int16, int8);
+    ADD_TAB_ENTRY(37, Int16_To_Float32, int16, float32, 0);
+    ADD_TAB_ENTRY(38, Int16_To_Int32, int16, int32, 0);
+    ADD_TAB_ENTRY(39, Int16_To_Int24, int16, int24, 0);
+    ADD_TAB_ENTRY(40, Int16_To_Int8, int16, int8, 0);
+    ADD_TAB_ENTRY(41, Int16_To_Int8_Dither, int16, int8, 1);
+    ADD_TAB_ENTRY(42, Int16_To_UInt8, int16, uint8, 0);
+    ADD_TAB_ENTRY(43, Int16_To_UInt8_Dither, int16, int8, 1);
 
-    ADD_TAB_ENTRY(44, Int8_To_Float32, int8, float32);
-    ADD_TAB_ENTRY(45, Int8_To_Int32, int8, int32);
-    ADD_TAB_ENTRY(46, Int8_To_Int24, int8, int24);
-    ADD_TAB_ENTRY(47, Int8_To_Int16, int8, int16);
-    ADD_TAB_ENTRY(48, Int8_To_UInt8, int8, uint8);
+    ADD_TAB_ENTRY(44, Int8_To_Float32, int8, float32, 0);
+    ADD_TAB_ENTRY(45, Int8_To_Int32, int8, int32, 0);
+    ADD_TAB_ENTRY(46, Int8_To_Int24, int8, int24, 0);
+    ADD_TAB_ENTRY(47, Int8_To_Int16, int8, int16, 0);
+    ADD_TAB_ENTRY(48, Int8_To_UInt8, int8, uint8, 0);
 
-    ADD_TAB_ENTRY(49, UInt8_To_Float32, uint8, float32);
-    ADD_TAB_ENTRY(50, UInt8_To_Int32, uint8, int32);
-    ADD_TAB_ENTRY(51, UInt8_To_Int24, uint8, int24);
-    ADD_TAB_ENTRY(52, UInt8_To_Int16, uint8, int16);
-    ADD_TAB_ENTRY(53, UInt8_To_Int8, uint8, int8);
+    ADD_TAB_ENTRY(49, UInt8_To_Float32, uint8, float32, 0);
+    ADD_TAB_ENTRY(50, UInt8_To_Int32, uint8, int32, 0);
+    ADD_TAB_ENTRY(51, UInt8_To_Int24, uint8, int24, 0);
+    ADD_TAB_ENTRY(52, UInt8_To_Int16, uint8, int16, 0);
+    ADD_TAB_ENTRY(53, UInt8_To_Int8, uint8, int8, 0);
 
-    ADD_TAB_ENTRY(54, Copy_8_To_8, int8, int8);
-    ADD_TAB_ENTRY(55, Copy_16_To_16, int16, int16);
-    ADD_TAB_ENTRY(56, Copy_24_To_24, int24, int24);
-    ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32); */
+    ADD_TAB_ENTRY(54, Copy_8_To_8, int8, int8, 0);
+    ADD_TAB_ENTRY(55, Copy_16_To_16, int16, int16, 0);
+    ADD_TAB_ENTRY(56, Copy_24_To_24, int24, int24, 0);
+    ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32, 0); */
 
     /* define test tupels */
     int buffer_sizes[] = {64, 256, 1024, MAX_BUFFLEN};
@@ -554,14 +556,24 @@ int main(void)
                         for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
                         {
                             #ifdef __ARM_NEON__
-                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
-                             * abs is not always available so:
-                             */
-                            PaInt32 absNoStrideDiff = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
-                            if(absNoStrideDiff < 0)
-                                absNoStrideDiff = -absNoStrideDiff;
-                            if(absNoStrideDiff >= 4)
+                            /* ARM NEON does not dither -> special treatment for dither cases */
+                            int errorNoStride = 0;
+                            if(table[iConverter].Dither)
+                            {
+                                /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                                 * abs is not always available so:
+                                 */
+                                PaInt32 absNoStrideDiff = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
+                                if(absNoStrideDiff < 0)
+                                    absNoStrideDiff = -absNoStrideDiff;
+                                if(absNoStrideDiff >= 4)
+                                    errorNoStride = 1;
+                            }
+                            else
+                                errorNoStride = pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem];
+                            if(errorNoStride)
                             #else
+                            /* Others check for equality as ususal */
                             if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem])
                             #endif
                             {
@@ -572,15 +584,26 @@ int main(void)
                                         pBuffNoAccelNoStride[iDestElem]);
                                 errorNoStride++;
                             }
+
                             #ifdef __ARM_NEON__
-                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
-                             * abs is not always available so:
-                             */
-                            PaInt32 absDiffStride = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
-                            if(absDiffStride < 0)
-                                absDiffStride = -absDiffStride;
-                            if(absDiffStride >= 4)
+                            /* ARM NEON does not dither -> special treatment for dither cases */
+                            int errorStride = 0;
+                            if(table[iConverter].Dither)
+                            {
+                                /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                                 * abs is not always available so:
+                                 */
+                                PaInt32 absDiffStride = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
+                                if(absDiffStride < 0)
+                                    absDiffStride = -absDiffStride;
+                                if(absDiffStride >= 4)
+                                    errorStride = 1;
+                            }
+                            else
+                                errorStride = pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride];
+                            if(errorStride)
                             #else
+                            /* Others check for equality as ususal */
                             if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride])
                             #endif
                             {
