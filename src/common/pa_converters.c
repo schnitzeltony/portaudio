@@ -722,13 +722,13 @@ static void Float32_To_Int24(
         temp = (PaInt32) scaled;
         
 #if defined(PA_LITTLE_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 8);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 24);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 8);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 24);
 #elif defined(PA_BIG_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 24);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 8);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 24);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 8);
 #endif
 
         src += sourceStride;
@@ -782,13 +782,13 @@ static void Float32_To_Int24_Dither(
         temp = (PaInt32) dithered;
 
 #if defined(PA_LITTLE_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 8);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 24);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 8);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 24);
 #elif defined(PA_BIG_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 24);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 8);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 24);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 8);
 #endif
 
         src += sourceStride;
@@ -841,13 +841,13 @@ static void Float32_To_Int24_Clip(
         temp = (PaInt32) scaled;
 
 #if defined(PA_LITTLE_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 8);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 24);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 8);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 24);
 #elif defined(PA_BIG_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 24);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 8);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 24);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 8);
 #endif
 
         src += sourceStride;
@@ -905,13 +905,13 @@ static void Float32_To_Int24_DitherClip(
         temp = (PaInt32) dithered;
 
 #if defined(PA_LITTLE_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 8);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 24);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 8);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 24);
 #elif defined(PA_BIG_ENDIAN)
-        dest[0] = (unsigned char)(temp >> 24);
-        dest[1] = (unsigned char)(temp >> 16);
-        dest[2] = (unsigned char)(temp >> 8);
+        dest[0] = (unsigned char)(((PaUint32)temp) >> 24);
+        dest[1] = (unsigned char)(((PaUint32)temp) >> 16);
+        dest[2] = (unsigned char)(((PaUint32)temp) >> 8);
 #endif
 
         src += sourceStride;
@@ -1238,7 +1238,7 @@ static void Int32_To_Int24(
     void *sourceBuffer, signed int sourceStride,
     unsigned int count, struct PaUtilTriangularDitherGenerator *ditherGenerator )
 {
-    PaInt32 *src    = (PaInt32*)sourceBuffer;
+    PaUint32 *src    = (PaInt32*)sourceBuffer;
     unsigned char *dest = (unsigned char*)destinationBuffer;
     (void) ditherGenerator; /* unused parameter */
     
@@ -1695,7 +1695,7 @@ static void Int16_To_Int24(
     void *sourceBuffer, signed int sourceStride,
     unsigned int count, struct PaUtilTriangularDitherGenerator *ditherGenerator )
 {
-    PaInt16 *src   = (PaInt16*) sourceBuffer;
+    PaUint16 *src   = (PaUint16*) sourceBuffer;
     unsigned char *dest = (unsigned char*)destinationBuffer;
     PaInt16 temp;
 
