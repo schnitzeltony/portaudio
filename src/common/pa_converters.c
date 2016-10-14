@@ -826,7 +826,6 @@ static void Float32_To_Int24_Clip(
             /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
-            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
@@ -886,7 +885,6 @@ static void Float32_To_Int24_DitherClip(
             /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
-            NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             dest = NeonWriteDestVectorInt24(neonResultVector, dest, destinationStride);
             count-=ARM_NEON_BEST_VECTOR_SIZE;
         }
