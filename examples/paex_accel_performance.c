@@ -554,8 +554,13 @@ int main(void)
                         for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
                         {
                             #ifdef __ARM_NEON__
-                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated */
-                            if(abs(pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem]) >= 4)
+                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                             * abs is not always available so:
+                             */
+                            PaInt32 absNoStrideDiff = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
+                            if(absNoStrideDiff < 0)
+                                absNoStrideDiff = -absNoStrideDiff;
+                            if(absNoStrideDiff >= 4)
                             #else
                             if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem])
                             #endif
@@ -568,8 +573,13 @@ int main(void)
                                 errorNoStride++;
                             }
                             #ifdef __ARM_NEON__
-                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated */
-                            if(abs(pBuffNoAccelStride[iDestElem*iStride]-pBuffAccelStride[iDestElem*iStride]) >= 4)
+                            /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                             * abs is not always available so:
+                             */
+                            PaInt32 absDiffStride = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
+                            if(absDiffStride < 0)
+                                absDiffStride = -absDiffStride;
+                            if(absDiffStride >= 4)
                             #else
                             if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride])
                             #endif
