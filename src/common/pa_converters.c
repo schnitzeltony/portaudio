@@ -700,12 +700,13 @@ static void Float32_To_Int24(
     {
         float32x4_t neonSourceVector, neonScaled;
         int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(2147483647.0);
         while(count >= ARM_NEON_BEST_VECTOR_SIZE)
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
             /* scale vector */
-            neonScaled = vmulq_n_f32(neonSourceVector, 2147483647.0);
+            neonScaled = vmulq_f32(neonSourceVector, neonMult);
             /* convert vector - rounded towards zero */
             neonResultVector = vcvtq_s32_f32(neonScaled);
             /* write result */
@@ -815,12 +816,13 @@ static void Float32_To_Int24_Clip(
         float32x4_t neonSourceVector, neonScaled;
         int32x4_t neonResultVector;
         int32_t resultVector32[ARM_NEON_BEST_VECTOR_SIZE];
+        float32x4_t neonMult = vdupq_n_f32(0x7FFFFFFF);
         while(count >= ARM_NEON_BEST_VECTOR_SIZE)
         {
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
             /* scale vector */
-            neonScaled = vmulq_n_f32(neonSourceVector, 0x7FFFFFFF);
+            neonScaled = vmulq_f32(neonSourceVector, neonMult);
             /* clip vector */
             neonScaled = NeonClipVector(neonScaled, -2147483648.f, 2147483647.f);
             /* convert vector - rounded towards zero */
