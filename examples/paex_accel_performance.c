@@ -86,14 +86,14 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
     PaInt32 iVal24;
     #if defined(PA_LITTLE_ENDIAN)
     iVal24 =
-        ((PaInt32)pBuf[0] << 8) |
-        ((PaInt32)pBuf[1] << 16) |
-        ((PaInt32)pBuf[2] << 24);
+        ((PaInt32)pBuf[0]) |
+        ((PaInt32)pBuf[1] << 8) |
+        ((PaInt32)pBuf[2] << 16);
     #elif defined(PA_BIG_ENDIAN)
     iVal24 =
-        ((PaInt32)pBuf[0] << 24) |
-        ((PaInt32)pBuf[1] << 16) |
-        ((PaInt32)pBuf[2] << 8);
+        ((PaInt32)pBuf[0]) |
+        ((PaInt32)pBuf[1] << 8) |
+        ((PaInt32)pBuf[2] << 16);
     #endif
     return iVal24;
 }
@@ -520,7 +520,7 @@ int main(void)
                                 pBuffNoAccelNoStride[iDestElem*3 + 2] != pBuffAccelNoStride[iDestElem*3 + 2])
                             {
                                 if(errorNoStride < MaxValueErrorMsg)
-                                    printf ("AccelError int24 at element %i: %i/0x%08X expected %i/0x%08X\n",
+                                    printf ("AccelError int24 at element %i: %i/0x%06X expected %i/0x%08X\n",
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
                                         _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
@@ -533,7 +533,7 @@ int main(void)
                                 pBuffNoAccelStride[iDestElem*iStride*3 + 2] != pBuffAccelStride[iDestElem*iStride*3 + 2])
                             {
                                 if(errorStride < MaxValueErrorMsg)
-                                    printf ("AccelError int24 stride %i at element %i/0x%08X: %i expected %i/0x%08X\n",
+                                    printf ("AccelError int24 stride %i at element %i/0x%06X: %i expected %i/0x%08X\n",
                                         iStride,
                                         iDestElem,
                                         _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
