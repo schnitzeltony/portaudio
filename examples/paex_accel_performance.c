@@ -50,7 +50,7 @@
 #include "pa_types.h"
 
 const int iRetryPerCase = 1000;
-#define MAX_BUFFLEN 4096
+#define MAX_BUFFLEN 1024
 
 extern PaUtilConverterTable paConverters;
 extern volatile int withAcceleration;
@@ -256,7 +256,7 @@ int main(void)
     ADD_TAB_ENTRY(57, Copy_32_To_32, int32, int32, 0, 0); */
 
     /* define test tupels */
-    int buffer_sizes[] = {64, 256, 1024, MAX_BUFFLEN};
+    int buffer_sizes[] = {64, 256, MAX_BUFFLEN};
     #define MAX_STRIDE 4
     int strides[] = {1, 2, MAX_STRIDE};
     int countStrides = sizeof(strides)/sizeof(int);
