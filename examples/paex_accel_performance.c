@@ -110,18 +110,18 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
     { \
         if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem]) \
         { \
-            if(errorNoStride < MaxValueErrorMsg) \
+            if(errorCount < MaxValueErrorMsg) \
                 printf ("AccelError " #_DATATYPE " at element %i: " #_FORMAT "/0x%08X expected " #_FORMAT "/0x%08X\n", \
                     iDestElem, \
                     pBuffAccelNoStride[iDestElem], \
                     pBuffAccelNoStride[iDestElem], \
                     pBuffNoAccelNoStride[iDestElem], \
                     pBuffNoAccelNoStride[iDestElem]); \
-            errorNoStride++; \
+            errorCount++; \
         } \
         if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride]) \
         { \
-            if(errorStride < MaxValueErrorMsg) \
+            if(errorCount < MaxValueErrorMsg) \
                 printf ("AccelError " #_DATATYPE " stride %i at element %i: " #_FORMAT "/0x%08X expected " #_FORMAT "/0x%08X\n", \
                     iStride, \
                     iDestElem, \
@@ -129,7 +129,7 @@ static PaInt32 _Int24_ToIn32(unsigned char* pBuf)
                     pBuffAccelStride[iDestElem*iStride], \
                     pBuffNoAccelStride[iDestElem*iStride], \
                     pBuffNoAccelStride[iDestElem*iStride]); \
-            errorStride++; \
+            errorCount++; \
         } \
     }
 
@@ -492,8 +492,7 @@ int main(void)
                     ((timeNoAccelStrideDest[iStrideNum] / timeAccelStrideDest[iStrideNum]) - 1.0) * 100.0);
 
                 /* Check for valid contents in destination buffers */
-                int errorNoStride = 0;
-                int errorStride = 0;
+                int errorCount = 0;
                 const int MaxValueErrorMsg = 32;
                 /* contents depend on destination data type */
                 switch(table[iConverter].outDataType)
@@ -533,14 +532,14 @@ int main(void)
                                     absNoStrideDiff = -absNoStrideDiff;
                                 if(absNoStrideDiff > 1)
                                 {
-                                    if(errorNoStride < MaxValueErrorMsg)
+                                    if(errorCount < MaxValueErrorMsg)
                                         printf ("AccelError int24 at element %i: %i/0x%06X expected %i/0x%08X\n",
                                             iDestElem,
                                             _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
                                             _Int24_ToIn32(pBuffAccelNoStride + iDestElem*3),
                                             _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3),
                                             _Int24_ToIn32(pBuffNoAccelNoStride + iDestElem*3));
-                                    errorNoStride++;
+                                    errorCount++;
                                 }
                             }
                             if( pBuffNoAccelStride[iDestElem*iStride*3 + 0] != pBuffAccelStride[iDestElem*iStride*3 + 0] ||
@@ -555,7 +554,7 @@ int main(void)
                                     absStrideDiff = -absStrideDiff;
                                 if(absStrideDiff > 1)
                                 {
-                                    if(errorStride < MaxValueErrorMsg)
+                                    if(errorCount < MaxValueErrorMsg)
                                         printf ("AccelError int24 stride %i at element %i/0x%06X: %i expected %i/0x%08X\n",
                                             iStride,
                                             iDestElem,
@@ -563,7 +562,7 @@ int main(void)
                                             _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
                                             _Int24_ToIn32(pBuffNoAccelStride + iDestElem*iStride*3),
                                             _Int24_ToIn32(pBuffNoAccelStride + iDestElem*iStride*3));
-                                    errorStride++;
+                                    errorCount++;
                                 }
                             }
                         }
@@ -575,6 +574,8 @@ int main(void)
                         PaInt32 *pBuffNoAccelStride = (PaInt32 *)destBufferStride;
                         PaInt32 *pBuffAccelNoStride = (PaInt32 *)destBufferAccel;
                         PaInt32 *pBuffAccelStride = (PaInt32 *)destBufferAccelStride;
+                        int errorNoStride = 0;
+                        int errorStride = 0;
                         for(int iDestElem=0; iDestElem<iBufferSize; iDestElem++)
                         {
                             #ifdef __ARM_NEON__
@@ -582,13 +583,13 @@ int main(void)
                             int errorNoStride = 0;
                             if(table[iConverter].Dither)
                             {
-                                /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                                /* we allow max deviation +-3 (2 + 1 rounding) - we don't dither for 32 bit accelerated
                                  * abs is not always available so:
                                  */
                                 PaInt32 absNoStrideDiff = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
                                 if(absNoStrideDiff < 0)
                                     absNoStrideDiff = -absNoStrideDiff;
-                                if(absNoStrideDiff >= 4)
+                                if(absNoStrideDiff > 3)
                                     errorNoStride = 1;
                             }
                             else
@@ -599,12 +600,12 @@ int main(void)
                             if(pBuffNoAccelNoStride[iDestElem] != pBuffAccelNoStride[iDestElem])
                             #endif
                             {
-                                if(errorNoStride < MaxValueErrorMsg)
+                                if(errorCount < MaxValueErrorMsg)
                                     printf ("AccelError PaInt32 at element %i: %i expected %i\n",
                                         iDestElem,
                                         pBuffAccelNoStride[iDestElem],
                                         pBuffNoAccelNoStride[iDestElem]);
-                                errorNoStride++;
+                                errorCount++;
                             }
 
                             #ifdef __ARM_NEON__
@@ -612,13 +613,13 @@ int main(void)
                             int errorStride = 0;
                             if(table[iConverter].Dither)
                             {
-                                /* we allow max deviation +-4 - we don't dither for 32 bit accelerated
+                                /* we allow max deviation +-3 (2 + 1 rounding) - we don't dither for 32 bit accelerated
                                  * abs is not always available so:
                                  */
                                 PaInt32 absDiffStride = pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem];
                                 if(absDiffStride < 0)
                                     absDiffStride = -absDiffStride;
-                                if(absDiffStride >= 4)
+                                if(absDiffStride > 3)
                                     errorStride = 1;
                             }
                             else
@@ -629,13 +630,13 @@ int main(void)
                             if(pBuffNoAccelStride[iDestElem*iStride] != pBuffAccelStride[iDestElem*iStride])
                             #endif
                             {
-                                if(errorStride < MaxValueErrorMsg)
+                                if(errorCount < MaxValueErrorMsg)
                                     printf ("AccelError PaInt32 stride %i at element %i: %i expected %i\n",
                                         iStride,
                                         iDestElem,
                                         pBuffAccelStride[iDestElem*iStride],
                                         pBuffNoAccelStride[iDestElem*iStride]);
-                                errorStride++;
+                                errorCount++;
                             }
                         }
                         break;
@@ -650,22 +651,22 @@ int main(void)
                         {
                             if(fabs(pBuffNoAccelNoStride[iDestElem]-pBuffAccelNoStride[iDestElem]) > 1.0 / 2147483648.0)
                             {
-                                if(errorNoStride < MaxValueErrorMsg)
+                                if(errorCount < MaxValueErrorMsg)
                                     printf ("AccelError float at element %i: %.12f expected %.12f\n",
                                         iDestElem,
                                         pBuffAccelNoStride[iDestElem],
                                         pBuffNoAccelNoStride[iDestElem]);
-                                errorNoStride++;
+                                errorCount++;
                             }
                             if(fabs(pBuffNoAccelStride[iDestElem*iStride]-pBuffAccelStride[iDestElem*iStride]) > 1.0 / 2147483648.0)
                             {
-                                if(errorStride < MaxValueErrorMsg)
+                                if(errorCount < MaxValueErrorMsg)
                                     printf ("AccelError float stride %i at element %i: %.12f expected %.12f\n",
                                         iStride,
                                         iDestElem,
                                         pBuffAccelStride[iDestElem*iStride],
                                         pBuffNoAccelStride[iDestElem*iStride]);
-                                errorStride++;
+                                errorCount++;
                             }
                         }
                         break;
