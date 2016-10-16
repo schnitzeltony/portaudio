@@ -556,7 +556,7 @@ int main(void)
                                 if(absStrideDiff > 1)
                                 {
                                     if(errorCount < MaxValueErrorMsg)
-                                        printf ("AccelError int24 stride %i at element %i/0x%06X: %i expected %i/0x%08X\n",
+                                        printf ("AccelError int24 stride %i at element %i: %i/0x%06X expected %i/0x%08X\n",
                                             iStride,
                                             iDestElem,
                                             _Int24_ToIn32(pBuffAccelStride + iDestElem*iStride*3),
