@@ -66,7 +66,6 @@ typedef struct PaUtilTriangularDitherGenerator{
     PaUint32 randSeed1;
     PaUint32 randSeed2;
     PaUint32 posInAccelBuff;
-    PaInt16 AccelBuff[DITHER_BUFF_SIZE];
 } PaUtilTriangularDitherGenerator;
 
 
@@ -120,9 +119,11 @@ static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
 
 
 #ifdef __ARM_NEON__
+extern PaInt16 accelBuff[DITHER_BUFF_SIZE];
+
 static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
 {
-    int16x4_t neonDither16 = vld1_s16(state->AccelBuff + state->posInAccelBuff);
+    int16x4_t neonDither16 = vld1_s16(accelBuff + state->posInAccelBuff);
     if(state->posInAccelBuff >= DITHER_BUFF_SIZE - ARM_NEON_BEST_VECTOR_SIZE)
         state->posInAccelBuff = 0;
     else

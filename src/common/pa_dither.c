@@ -47,21 +47,25 @@
 
 extern volatile int withAcceleration;
 
+PaInt16 accelBuff[DITHER_BUFF_SIZE];
+int accelBuffFilled = 0;
+
 void PaUtil_InitializeTriangularDitherState( PaUtilTriangularDitherGenerator *state )
 {
     state->previous = 0;
     state->randSeed1 = 22222;
     state->randSeed2 = 5555555;
     state->posInAccelBuff = 0;
-    if(withAcceleration)
+    if(withAcceleration && !accelBuffFilled)
     {
         withAcceleration = 0;
         for(int iEntry=0; iEntry<DITHER_BUFF_SIZE; iEntry++)
-            state->AccelBuff[iEntry] = (PaInt16)PaUtil_Generate16BitTriangularDither(state);
+            accelBuff[iEntry] = (PaInt16)PaUtil_Generate16BitTriangularDither(state);
         withAcceleration = 1;
         state->previous = 0;
         state->randSeed1 = 22222;
         state->randSeed2 = 5555555;
+        accelBuffFilled = 1;
     }
 }
 
@@ -70,7 +74,7 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *s
 {
     if(withAcceleration)
     {
-        PaInt32 dither = (PaInt32)state->AccelBuff[state->posInAccelBuff];
+        PaInt32 dither = (PaInt32)accelBuff[state->posInAccelBuff];
         state->posInAccelBuff++;
         if(state->posInAccelBuff >= DITHER_BUFF_SIZE)
             state->posInAccelBuff = 0;
