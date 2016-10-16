@@ -57,11 +57,16 @@ extern "C"
  * unsigned long so it will work on 64 bit systems.
  */
 
+/* Must be multiple of 4 !! */
+#define DITHER_BUFF_SIZE 32768
+
 /** @brief State needed to generate a dither signal */
 typedef struct PaUtilTriangularDitherGenerator{
     PaUint32 previous;
     PaUint32 randSeed1;
     PaUint32 randSeed2;
+    PaUint32 posInAccelBuff;
+    PaInt16 AccelBuff[DITHER_BUFF_SIZE];
 } PaUtilTriangularDitherGenerator;
 
 
@@ -117,24 +122,12 @@ static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
 #ifdef __ARM_NEON__
 static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
 {
-    int32_t current, highPass[ARM_NEON_BEST_VECTOR_SIZE];
-    for(int lane=0; lane<ARM_NEON_BEST_VECTOR_SIZE; lane++)
-    {
-        /* Generate two random numbers. */
-        state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
-        state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
-        /* Generate triangular distribution about 0.
-         * Shift before adding to prevent overflow which would skew the distribution.
-         * Also shift an extra bit for the high pass filter.
-         */
-        current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
-                  (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
-
-        /* High pass filter to reduce audibility. */
-        highPass[lane] = current - state->previous;
-        state->previous = current;
-    }
-    return vmulq_n_f32(vcvtq_f32_s32(vld1q_s32(highPass)), const_float_dither_scale_);
+    int16x4_t neonDither16 = vld1_s16(state->AccelBuff + state->posInAccelBuff);
+    if(state->posInAccelBuff >= DITHER_BUFF_SIZE - ARM_NEON_BEST_VECTOR_SIZE)
+        state->posInAccelBuff = 0;
+    else
+        state->posInAccelBuff += ARM_NEON_BEST_VECTOR_SIZE;
+    return vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(neonDither16)), const_float_dither_scale_);
 }
 #endif
 

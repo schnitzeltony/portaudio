@@ -52,11 +52,30 @@ void PaUtil_InitializeTriangularDitherState( PaUtilTriangularDitherGenerator *st
     state->previous = 0;
     state->randSeed1 = 22222;
     state->randSeed2 = 5555555;
+    state->posInAccelBuff = 0;
+    if(withAcceleration)
+    {
+        withAcceleration = 0;
+        for(int iEntry=0; iEntry<DITHER_BUFF_SIZE; iEntry++)
+            state->AccelBuff[iEntry] = (PaInt16)PaUtil_Generate16BitTriangularDither(state);
+        withAcceleration = 1;
+        state->previous = 0;
+        state->randSeed1 = 22222;
+        state->randSeed2 = 5555555;
+    }
 }
 
 
 PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *state )
 {
+    if(withAcceleration)
+    {
+        PaInt32 dither = (PaInt32)state->AccelBuff[state->posInAccelBuff];
+        state->posInAccelBuff++;
+        if(state->posInAccelBuff >= DITHER_BUFF_SIZE)
+            state->posInAccelBuff = 0;
+        return dither;
+    }
     PaInt32 current, highPass;
 
     /* Generate two random numbers. */
