@@ -155,7 +155,8 @@ int main(void)
     float32x4_t neonDither;
     for(iDither=0; iDither<MAX_BUFFLEN/ARM_NEON_BEST_VECTOR_SIZE; iDither++)
     {
-        neonDither = PaUtil_GenerateFloatTriangularDitherVector(&dither);
+        neonDither = PaUtil_GenerateFloatTriangularDitherVector(
+            &dither, const_float_dither_scale_);
         vst1q_f32(dithersAccel+(iDither*ARM_NEON_BEST_VECTOR_SIZE), neonDither);
     }
     /* check dither for equality */

@@ -777,7 +777,8 @@ static void Float32_To_Int24_Dither(
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
             /* get dither */
-            neonDither = PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator);
+            neonDither = PaUtil_GenerateFloatTriangularDitherVector(
+                ditherGenerator, const_float_dither_scale_ * 256.0);
             /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
             neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
             /* convert vector - rounded towards zero */
@@ -793,7 +794,7 @@ static void Float32_To_Int24_Dither(
     {
         /* convert to 32 bit and drop the low 8 bits */
 
-        double dither  = PaUtil_GenerateFloatTriangularDither( ditherGenerator );
+        double dither  = PaUtil_GenerateFloatTriangularDither24( ditherGenerator );
         /* use smaller scaler to prevent overflow when we add the dither */
         double dithered = ((double)*src * (2147483646.0)) + dither;
         
@@ -897,7 +898,8 @@ static void Float32_To_Int24_DitherClip(
             /* get source vector */
             neonSourceVector = NeonGetSourceVector(&src, sourceStride);
             /* get dither */
-            neonDither = PaUtil_GenerateFloatTriangularDitherVector(ditherGenerator);
+            neonDither = PaUtil_GenerateFloatTriangularDitherVector(
+                ditherGenerator, const_float_dither_scale_ * 256.0);
             /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
             neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
             /* clip vector */
@@ -916,7 +918,7 @@ static void Float32_To_Int24_DitherClip(
     {
         /* convert to 32 bit and drop the low 8 bits */
         
-        double dither  = PaUtil_GenerateFloatTriangularDither( ditherGenerator );
+        double dither  = PaUtil_GenerateFloatTriangularDither24( ditherGenerator );
         /* use smaller scaler to prevent overflow when we add the dither */
         double dithered = ((double)*src * (2147483646.0)) + dither;
         PA_CLIP_( dithered, -2147483648., 2147483647.  );

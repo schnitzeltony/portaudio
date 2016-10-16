@@ -102,6 +102,13 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *d
 */
 float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *ditherState );
 
+/**
+ @brief Calculate 2 LSB * 256 dither signal with a triangular distribution.
+ Ranged for adding to a pre-scaled float - special for float to 24bit conversion.
+ @return
+ A float with a range of -512.0 to +511.99999.
+*/
+float PaUtil_GenerateFloatTriangularDither24( PaUtilTriangularDitherGenerator *ditherState );
 
 
 /* Note that the linear congruential algorithm requires 32 bit integers
@@ -115,20 +122,19 @@ float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *dit
 #define PA_FLOAT_DITHER_SCALE_  (1.0f / ((1<<PA_DITHER_BITS_)-1))
 static const float const_float_dither_scale_ = PA_FLOAT_DITHER_SCALE_;
 
-#define DITHER_SHIFT_  ((sizeof(PaInt32)*8 - PA_DITHER_BITS_) + 1)
-
 
 #ifdef __ARM_NEON__
 extern PaInt16 accelBuff[DITHER_BUFF_SIZE];
 
-static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector( PaUtilTriangularDitherGenerator *state)
+static inline float32x4_t PaUtil_GenerateFloatTriangularDitherVector(
+    PaUtilTriangularDitherGenerator *state, const float ditherScale)
 {
     int16x4_t neonDither16 = vld1_s16(accelBuff + state->posInAccelBuff);
     if(state->posInAccelBuff >= DITHER_BUFF_SIZE - ARM_NEON_BEST_VECTOR_SIZE)
         state->posInAccelBuff = 0;
     else
         state->posInAccelBuff += ARM_NEON_BEST_VECTOR_SIZE;
-    return vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(neonDither16)), const_float_dither_scale_);
+    return vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(neonDither16)), ditherScale);
 }
 #endif
 

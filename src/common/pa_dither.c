@@ -90,6 +90,8 @@ PaInt32 PaUtil_Generate16BitTriangularDither( PaUtilTriangularDitherGenerator *s
      * Shift before adding to prevent overflow which would skew the distribution.
      * Also shift an extra bit for the high pass filter. 
      */
+#define DITHER_SHIFT_  ((sizeof(PaInt32)*8 - PA_DITHER_BITS_) + 1)
+
     current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
               (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
 
@@ -119,6 +121,26 @@ float PaUtil_GenerateFloatTriangularDither( PaUtilTriangularDitherGenerator *sta
     highPass = current - state->previous;
     state->previous = current;
     return ((float)highPass) * const_float_dither_scale_;
+}
+
+float PaUtil_GenerateFloatTriangularDither24( PaUtilTriangularDitherGenerator *state )
+{
+    PaInt32 current, highPass;
+
+    /* Generate two random numbers. */
+    state->randSeed1 = (state->randSeed1 * 196314165) + 907633515;
+    state->randSeed2 = (state->randSeed2 * 196314165) + 907633515;
+    /* Generate triangular distribution about 0.
+     * Shift before adding to prevent overflow which would skew the distribution.
+     * Also shift an extra bit for the high pass filter. 
+     */
+    current = (((PaInt32)state->randSeed1)>>DITHER_SHIFT_) +
+              (((PaInt32)state->randSeed2)>>DITHER_SHIFT_);
+
+    /* High pass filter to reduce audibility. */
+    highPass = current - state->previous;
+    state->previous = current;
+    return ((float)highPass) * (const_float_dither_scale_ * 256.0);
 }
 
 
