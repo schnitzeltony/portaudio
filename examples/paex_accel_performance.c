@@ -198,11 +198,11 @@ int main(void)
     ADD_TAB_ENTRY(7,  Float32_To_Int24_DitherClip, float32, int24, 1, 1);
 
     ADD_TAB_ENTRY(8,  Float32_To_Int16, float32, int16, 0, 0);
-    /*ADD_TAB_ENTRY(9,  Float32_To_Int16_Dither, float32, int16, 1, 0);*/
+    ADD_TAB_ENTRY(9,  Float32_To_Int16_Dither, float32, int16, 1, 0);
     ADD_TAB_ENTRY(10, Float32_To_Int16_Clip, float32, int16, 0, 1);
-    /*ADD_TAB_ENTRY(11, Float32_To_Int16_DitherClip, float32, int16, 1, 1);
+    ADD_TAB_ENTRY(11, Float32_To_Int16_DitherClip, float32, int16, 1, 1);
 
-    ADD_TAB_ENTRY(12, Float32_To_Int8, float32, int8, 0, 0);
+    /*ADD_TAB_ENTRY(12, Float32_To_Int8, float32, int8, 0, 0);
     ADD_TAB_ENTRY(13, Float32_To_Int8_Dither, float32, int8, 1, 0);
     ADD_TAB_ENTRY(14, Float32_To_Int8_Clip, float32, int8, 0, 1);
     ADD_TAB_ENTRY(15, Float32_To_Int8_DitherClip, float32, int8, 1, 1);

@@ -997,6 +997,30 @@ static void Float32_To_Int16_Dither(
     float *src = (float*)sourceBuffer;
     PaInt16 *dest = (PaInt16*)destinationBuffer;
 
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled, neonDither;
+        int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(32766.0f);
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(&src, sourceStride);
+            /* get dither */
+            neonDither = PaUtil_GenerateFloatTriangularDitherVector(
+                ditherGenerator, const_float_dither_scale_);
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
+            /* convert vector - rounded towards zero */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write result */
+            dest = NeonWriteDestVectorInt16(vmovn_s32(neonResultVector), dest, destinationStride);
+            count -= ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
+
     while( count-- )
     {
 
@@ -1072,6 +1096,30 @@ static void Float32_To_Int16_DitherClip(
     float *src = (float*)sourceBuffer;
     PaInt16 *dest =  (PaInt16*)destinationBuffer;
     (void)ditherGenerator; /* unused parameter */
+
+#ifdef __ARM_NEON__
+    if(withAcceleration)
+    {
+        float32x4_t neonSourceVector, neonScaled, neonDither;
+        int32x4_t neonResultVector;
+        float32x4_t neonMult = vdupq_n_f32(32766.0f);
+        while(count >= ARM_NEON_BEST_VECTOR_SIZE)
+        {
+            /* get source vector */
+            neonSourceVector = NeonGetSourceVector(&src, sourceStride);
+            /* get dither */
+            neonDither = PaUtil_GenerateFloatTriangularDitherVector(
+                ditherGenerator, const_float_dither_scale_);
+            /* scale vector + add dither vmla(a,b,c) <-> a+b*c */
+            neonScaled = vmlaq_f32(neonDither, neonSourceVector, neonMult);
+            /* convert vector - rounded towards zero */
+            neonResultVector = vcvtq_s32_f32(neonScaled);
+            /* write clipped result */
+            dest = NeonWriteDestVectorInt16(vqmovn_s32(neonResultVector), dest, destinationStride);
+            count -= ARM_NEON_BEST_VECTOR_SIZE;
+        }
+    }
+#endif
 
     while( count-- )
     {
