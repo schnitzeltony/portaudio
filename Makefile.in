@@ -78,6 +78,9 @@ EXAMPLES = \
 	bin/paex_write_sine \
 	bin/paex_write_sine_nonint
 
+PERFORMANCE = \
+    bin/paex_accel_performance
+
 SELFTESTS = \
 	bin/paqa_devs \
 	bin/paqa_errs \
@@ -155,13 +158,15 @@ SRC_DIRS = \
 SUBDIRS =
 @ENABLE_CXX_TRUE@SUBDIRS += bindings/cpp
 
-all: lib/$(PALIB) all-recursive tests examples selftests
+all: lib/$(PALIB) all-recursive tests examples selftests performance
 
 tests: bin-stamp $(TESTS)
 
 examples: bin-stamp $(EXAMPLES)
 
 selftests: bin-stamp $(SELFTESTS)
+
+performance: bin-stamp $(PERFORMANCE)
 
 loopback: bin-stamp bin/paloopback
 
@@ -174,13 +179,16 @@ $(ALL_TESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) test/%.c
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
 	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
 
-$(EXAMPLES): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) examples/%.c
+$(EXAMPLES): bin/%: lib/$(PALIB) $(MAKEFILE) performance $(PAINC) examples/%.c
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
 	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
 
 $(SELFTESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) qa/%.c
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
 	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
+
+$(PERFORMANCE): bin/%: $(MAKEFILE) $(COMMON_PERF_OBJS) examples/paex_accel_performance.c
+	$(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(COMMON_PERF_OBJS) $(top_srcdir)/examples/$*.c
 
 bin/paloopback: lib/$(PALIB) $(MAKEFILE) $(PAINC) $(LOOPBACK_OBJS)
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(LOOPBACK_OBJS) lib/$(PALIB) $(LIBS)
